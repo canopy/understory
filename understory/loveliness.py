@@ -109,6 +109,7 @@ def handle_job(host, job_run_id, db):  # , browser):
                      what="start_time = ?, run_time = ?",
                      vals=[f"{st.seconds}.{st.microseconds}",
                            f"{rt.seconds}.{rt.microseconds}", job_run_id])
+    print(flush=True)
 
 
 @main.register()
