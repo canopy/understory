@@ -14,7 +14,7 @@ loveliness = "understory.loveliness:main"
 
 [tool.poetry.dependencies]
 python = "^3.7"
-understory-web = "^0.0.8"
+understory-web = "^0.0.9"
 
 [tool.poetry.dev-dependencies]
 ipython = "^7.23.1"
