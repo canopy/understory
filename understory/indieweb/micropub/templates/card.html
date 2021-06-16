@@ -1,0 +1,47 @@
+$def with (card)
+$var breadcrumbs = ("pub", "Content", "cards", "Cards")
+$ title = card.get("name", card["nickname"])
+$var title: $title[0]
+$var subtitle: $card["nickname"][0]
+
+<div id=photos>
+<ul>
+$for photo in card.get("photo", []):
+    <li>$photo</li>
+</ul>
+</div>
+
+<div id=urls>
+<ul>
+$for url in card.get("url", []):
+    <li>$url</li>
+</ul>
+</div>
+
+<p><strong>$card["visibility"][0]</strong></p>
+
+<button id=save>Save</button>
+
+<script>
+_.load(() => {
+  const mp = new _.Micropub('/pub')
+  let changes = {add: {}, remove: {}, replace: {}}
+  _('#urls').append('<button id=add_url>Add</button>')
+  _('#add_url').click(() => {
+    const url = prompt('Enter a URL associated with the given card:')
+    if (!('url' in changes.add))
+      changes.add.url = []
+    changes.add.url.push(url)
+  })
+  _('#photos').append('<button id=add_photo>Add</button>')
+  _('#add_photo').click(() => {
+    const url = prompt('Enter a URL associated with the given card:')
+    if (!('photo' in changes.add))
+      changes.add.photo = []
+    changes.add.photo.push(url)
+  })
+  _('#save').click(() => {
+    mp.update('pub/cards/$card["nickname"][0]', changes)
+  })
+})
+</script>

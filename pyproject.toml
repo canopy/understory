@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "understory"
-version = "0.0.31"
+version = "0.0.32-alpha.2"
 description = "The tools that power the canopy"
 authors = ["Angelo Gladding <angelo@lahacker.net>"]
 license = "AGPL-3.0-or-later"
@@ -14,7 +14,7 @@ loveliness = "understory.loveliness:main"
 
 [tool.poetry.dependencies]
 python = "^3.7"
-understory-web = "^0.0.12"
+understory-web = "^0.0.19"
 
 [tool.poetry.dev-dependencies]
 ipython = "^7.23.1"
@@ -23,6 +23,12 @@ flake8-docstrings = "^1.6.0"
 pep8-naming = "^0.11.1"
 pytest = "^6.2.4"
 pytest-cov = "^2.12.0"
+webdriver-manager = "^3.4.2"
+black = "^21.6b0"
+pynvim = "^0.4.3"
+pytest-gevent = "^1.1.0"
+pyre-check = "^0.9.3"
+isort = "^5.8.0"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

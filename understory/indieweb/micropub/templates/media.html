@@ -1,0 +1,19 @@
+$def with (files)
+$var title: Media
+
+<form action=/pub/media enctype=multipart/form-data method=post>
+<div><label>File <input name=file type=file></label></div>
+<button>Upload</button>
+</form>
+
+<ul>
+$for file in files:
+    <li>
+    <form action=/pub/media/$file.name method=delete>
+    <input type=hidden name=_http_method value=delete>
+    <a href=/pub/media/$file.name>$file.name</a>
+    <small>$round(file.stat().st_size / 1024)kb</small>
+    <button>Delete</button>
+    </form>
+    </li>
+</ul>

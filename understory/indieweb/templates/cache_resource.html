@@ -1,0 +1,10 @@
+$def with (resource)
+$var title: Cache
+
+$ repr = representative_hcard(resource["data"], resource["url"])
+<div>
+$if repr:
+    <p><a href=$repr["uid"][0]>$repr["name"][0]</a></p>
+<p><big><code>$resource["url"]</code></big></p>
+<pre><small>$pformat(resource["data"])</small></pre>
+</div>

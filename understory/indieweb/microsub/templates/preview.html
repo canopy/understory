@@ -1,0 +1,18 @@
+$def with (url, preview)
+$var title: Preview of $url
+
+<form method=post action=/sub>
+    <input type=hidden name=action value=follow>
+    <input type=hidden name=url value=$url>
+    <button>Subscribe</button>
+</form>
+
+<ul>
+$for item in preview["items"]:
+    <li>
+    $if "content" in item:
+        <div class=e-content>$:item["content"]["html"]</div>
+    $# <big>$item["name"]</big><br><small><a
+    $# href=/sub/preview?url=$result["url"]>$result["url"]</a></small><br>
+    </li>
+</ul>

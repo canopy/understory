@@ -1,1 +1,4 @@
+geckodriver.log
 poetry.lock
+.coverage
+test_results.xml

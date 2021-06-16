@@ -1,0 +1,8 @@
+$def with (followers)
+$var title: Followers
+
+<ul>
+$for follower in followers:
+    <li><strong>/$follower["resource"]</strong><br>
+    $follower["callback_url"] $follower["followed"]</li>
+</ul>

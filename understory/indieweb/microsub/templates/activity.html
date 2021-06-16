@@ -1,0 +1,19 @@
+$def with (following)
+$var title: Following
+
+<form action=/sub/search>
+<div><label>Query (ie. address or keywords) <input type=text name=q
+placeholder="eg. example.com or cactus"></label></div>
+<button>Search</button>
+</form>
+
+$# <form>
+$# <div><label>Feed address <input type=text name=query
+$# placeholder="eg. https://.., hyper://.., ipfs://.."></label></div>
+$# <button name=action value=follow>Follow</button>
+$# </form>
+
+<ul>
+$for feed in following:
+    <li>$dict(feed)</li>
+</ul>

@@ -5,9 +5,11 @@ Just a bunch of ladybugs doing their thing.
 
 """
 
-from gevent import monkey; monkey.patch_all()  # noqa
+from gevent import monkey
 
-from importlib import import_module
+monkey.patch_all()
+
+import importlib
 import json
 import pathlib
 import time
@@ -15,11 +17,9 @@ import traceback
 
 import gevent.queue
 import pendulum
-from . import kv
-from . import sql
-from . import term
-from . import web
 
+from understory import kv, sql, term, web
+from understory.web import tx
 
 main = term.application("loveliness", "job queue")
 queue = gevent.queue.PriorityQueue()
@@ -31,7 +31,7 @@ def run_scheduler():  # browser):
     while True:
         now = pendulum.now()
         if now.second:
-            time.sleep(.9)
+            time.sleep(0.9)
             continue
         # TODO schedule_jobs()
         time.sleep(1)
@@ -67,7 +67,7 @@ def run_scheduler():  # browser):
 #     #             else:
 #     #                 run = False
 #     #         if run:
-#     #             canopy.enqueue(getattr(import_module(job["module"]),
+#     #             canopy.enqueue(getattr(importlib.import_module(job["module"]),
 #     #                                    job["object"]))
 #     # time.sleep(.9)
 
@@ -75,41 +75,83 @@ def run_scheduler():  # browser):
 def handle_job(host, job_run_id, db):  # , browser):
     """Handle a freshly dequeued job."""
     # TODO handle retries
-    web.tx.host.name = host
-    web.tx.host.db = db
-    web.tx.host.cache = web.cache(db=db)
+    tx.host.name = host
+    tx.host.db = db
+    tx.host.cache = web.cache(db=db)
     # tx.browser = browser
-    job = web.tx.db.select("job_runs AS r", what="s.rowid, *",
-                           join="""job_signatures AS s
+    job = tx.db.select(
+        "job_runs AS r",
+        what="s.rowid, *",
+        join="""job_signatures AS s
                                    ON s.rowid = r.job_signature_id""",
-                           where="r.job_id = ?", vals=[job_run_id])[0]
+        where="r.job_id = ?",
+        vals=[job_run_id],
+    )[0]
     _module = job["module"]
     _object = job["object"]
     _args = json.loads(job["args"])
     _kwargs = json.loads(job["kwargs"])
-    print(f"{host}/{_module}:{_object}",
-          *(_args + list(f"{k}={v}" for k, v in _kwargs.items())),
-          sep="\n  ", flush=True)
-    web.tx.db.update("job_runs", where="job_id = ?", vals=[job_run_id],
-                     what="started = STRFTIME('%Y-%m-%d %H:%M:%f', 'NOW')")
+    print(
+        f"{host}/{_module}:{_object}",
+        *(_args + list(f"{k}={v}" for k, v in _kwargs.items())),
+        sep="\n  ",
+        flush=True,
+    )
+    tx.db.update(
+        "job_runs",
+        where="job_id = ?",
+        vals=[job_run_id],
+        what="started = STRFTIME('%Y-%m-%d %H:%M:%f', 'NOW')",
+    )
     status = 0
     try:
-        output = getattr(import_module(_module), _object)(*_args, **_kwargs)
+        output = getattr(importlib.import_module(_module), _object)(*_args, **_kwargs)
     except Exception as err:
         status = 1
         output = str(err)
         traceback.print_exc()
-    web.tx.db.update("job_runs", vals=[status, output, job_run_id],
-                     what="""finished = STRFTIME('%Y-%m-%d %H:%M:%f', 'NOW'),
-                             status = ?, output = ?""", where="job_id = ?")
-    run = web.tx.db.select("job_runs", where="job_id = ?",
-                           vals=[job_run_id])[0]
+    tx.db.update(
+        "job_runs",
+        vals=[status, output, job_run_id],
+        what="""finished = STRFTIME('%Y-%m-%d %H:%M:%f', 'NOW'),
+                             status = ?, output = ?""",
+        where="job_id = ?",
+    )
+    run = tx.db.select("job_runs", where="job_id = ?", vals=[job_run_id])[0]
     st, rt = run["started"] - run["created"], run["finished"] - run["started"]
-    web.tx.db.update("job_runs", where="job_id = ?",
-                     what="start_time = ?, run_time = ?",
-                     vals=[f"{st.seconds}.{st.microseconds}",
-                           f"{rt.seconds}.{rt.microseconds}", job_run_id])
+    tx.db.update(
+        "job_runs",
+        where="job_id = ?",
+        what="start_time = ?, run_time = ?",
+        vals=[
+            f"{st.seconds}.{st.microseconds}",
+            f"{rt.seconds}.{rt.microseconds}",
+            job_run_id,
+        ],
+    )
     print(flush=True)
+
+
+def serve(db_prefixes):
+    """"""
+    # TODO gevent.spawn(run_scheduler)  # , sqldbs)  # , browser)
+
+    def run_worker(db_prefix, kv, db):  # browser):
+        for job in kv["jobs"].keep_popping():
+            handle_job(db_prefix, job, db)  # , browser)
+
+    for db_prefix in db_prefixes:
+        kvdb = kv.db(db_prefix, ":", {"jobs": "list"})
+        sqldb = sql.db(f"{db_prefix}.db")
+        # browser = agent.browser()
+        for _ in range(worker_count):
+            gevent.spawn(run_worker, db_prefix, kvdb, sqldb)  # , browser)
+    try:
+        while True:
+            time.sleep(1)
+    except KeyboardInterrupt:  # TODO capture supervisord's kill signal
+        # browser.quit()
+        pass
 
 
 @main.register()
@@ -118,26 +160,7 @@ class Serve:
 
     def run(self, stdin, log):
         """Spawn a scheduler and workers and start sending jobs to them."""
-        hosts = [p.stem for p in pathlib.Path().glob("*.db")]
-        gevent.spawn(run_scheduler)  # , sqldbs)  # , browser)
-
-        def run_worker(host, kv, db):  # browser):
-            for job in kv["jobs"].keep_popping():
-                handle_job(host, job, db)  # , browser)
-
-        for host in hosts:
-            kvdb = kv.db(host, ":", {"jobs": "list"})
-            sqldb = sql.db(f"{host}.db")
-            # browser = agent.browser()
-            for _ in range(worker_count):
-                gevent.spawn(run_worker, host, kvdb, sqldb)  # , browser)
-
-        try:
-            while True:
-                time.sleep(1)
-        except KeyboardInterrupt:  # TODO capture supervisord's kill signal
-            # browser.quit()
-            pass
+        serve(p.stem for p in pathlib.Path().glob("*.db"))
 
 
 if __name__ == "__main__":

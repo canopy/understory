@@ -1,0 +1,9 @@
+$def with (rooms, render_dict)
+$var breadcrumbs = ("pub", "Content")
+$var title: Rooms
+
+<ul>
+$for r in rooms:
+    <p><a href=$r["path"]>$r["path"]</a> <small>$r["version"]</small></p>
+    $:render_dict(r["resource"])
+</ul>

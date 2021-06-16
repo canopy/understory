@@ -1,0 +1,19 @@
+$def with (owner)
+
+<form action=/auth/identity method=post>
+<div><label><small>Name:</small><br>
+<input type=text name=name value="$owner['name'][0]"><label></div>
+<button>Save</button>
+</form>
+
+<form action=/auth/identity method=post>
+<div><label><small>GitHub:</small><br>
+<input type=text name=github value=""><label></div>
+<button>Save</button>
+</form>
+
+<form action=/auth/identity method=post>
+<div><label><small>Twitter:</small><br>
+<input type=text name=twitter value=""><label></div>
+<button>Save</button>
+</form>

@@ -1,0 +1,13 @@
+$def with (cache)
+$var title: Cache
+
+<ul>
+$for resource in cache:
+    $ repr = representative_hcard(resource["data"], resource["url"])
+    <li><p>
+    $ url = uri(resource["url"]).minimized
+    <big><code><a href=cache/$url>$url</a></code></big><br>
+    $if repr:
+        <small>Person: <a href=$repr["uid"][0]>$repr["name"][0]</a></small>
+    </p></li>
+</ul>

@@ -1,0 +1,20 @@
+$def with ()
+$var title: Auth
+
+$if tx.user.is_owner:
+    <p><a href=/auth/sign-ins>sign-ins</a> and
+    <a href=/auth/visitors>visitors</a></p>
+$elif tx.user.session:
+    <p>You are signed in as <strong>$tx.user.session["url"]</strong></p>
+$else:
+    <h2>Owner</h2>
+    <form action=/auth/sign-in method=post>
+    <input type=text name=passphrase></label></div>
+    <button>Sign In</button>
+    </form>
+    <h2>Visitor</h2>
+    <form action=/auth/visitors/sign-in method=post>
+    <div><label>Your web address<br>
+    <input type=text name=me></label></div>
+    <button>Sign In</button>
+    </form>

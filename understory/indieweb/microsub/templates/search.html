@@ -1,0 +1,10 @@
+$def with (query, results)
+$var title: Search for $query
+
+<ul>
+$for result in results:
+    <li>
+    <big>$result["name"]</big><br><small><a
+    href=/sub/preview?url=$result["url"]>$result["url"]</a></small><br>
+    </li>
+</ul>

@@ -1,0 +1,33 @@
+$def with (client, developer, scopes)
+
+<form method=post action=/$tx.request.uri.path>
+<fieldset>
+<legend>Client <small>(ie. Tool/Service)</small></legend>
+<p><big>\
+$ title = client["url"]
+$if client["name"]:
+    $if client["name"]:
+        $ title = f"{client['name']} ({client['url']})"
+        $client["name"]<br>
+$var title = f"Sign in to {title}"
+<a href=$client["url"]><code>$client["url"]</code></a></big></p>
+$if developer:
+    <p><small>$developer["name"]<br>
+    <a href=$developer["url"]>$developer["url"]</a></small></p>
+</fieldset>
+$if scopes:
+    <fieldset>
+    <legend>Scope</legend>
+    <ul>
+    $for scope in scopes:
+        <li><input type=checkbox name=scopes value=$scope checked> $scope</li>
+    </ul>
+    </fieldset>
+<button name=action value=signin>Sign In</button>
+<button name=action value=cancel>Cancel</button>
+</form>
+
+<style>
+body {
+    max-width: 40em; }
+</style>

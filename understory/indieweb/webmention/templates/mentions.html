@@ -1,0 +1,10 @@
+$def with (mentions)
+$var title: Mentions
+
+<ul>
+$for mention in mentions:
+    <li>$mention["received"].diff_for_humans()
+    $mention["source"] &rarr;
+    $mention["target"]<br>
+    $mention["data"]</li>
+</ul>
