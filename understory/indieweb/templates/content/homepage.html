@@ -1,9 +1,13 @@
-$def with (owner)
+$def with (owner, posts)
 
-<article class=h-card>
+<header class=h-card>
 <h1 class=p-name>$owner["name"][0]</h1>
 <p><a class="u-url u-uid" href=$owner["url"][0]>$owner["url"][0]</a></p>
-
 $if tx.user.is_owner:
     <a href=/auth/identity>Edit</a>
+</header>
+
+<article>
+$for post in posts:
+    <div>$post</div>
 </article>

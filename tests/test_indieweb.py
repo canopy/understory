@@ -14,6 +14,7 @@ import pathlib
 import textwrap
 
 import pytest
+import requests
 from selenium import webdriver
 from understory import indieweb, kv, sql, web  # type: ignore
 from understory.web import tx
@@ -50,7 +51,10 @@ def teardown_module(module):
         )
         for character in sorted(characters.keys()):
             if character in who:
-                url = f"{index:03}_{character}_{slug}.png"
+                url = (
+                    f"https://media.githubusercontent.com/media/canopy/understory/"
+                    f"main/docs/{index:03}_{character}_{slug}.png"
+                )
                 story += f"<a href={url}><img src={url}></a>"
             else:
                 story += "<div class=filler></div>"
@@ -86,13 +90,15 @@ def gen_app(name, port) -> web.Application:
             indieweb.indieauth.server,
             indieweb.indieauth.client,
             indieweb.indieauth.root,
-            indieweb.indieauth.profile,
+            indieweb.micropub.server,
+            indieweb.content,
         ),
         wrappers=(
             wrap,
             web.resume_session,
             indieweb.indieauth.wrap_server,
             indieweb.indieauth.wrap_client,
+            indieweb.micropub.wrap_server,
         ),
     )
 
@@ -106,6 +112,9 @@ class TestIndieAuthDocs:
         alice_app = gen_app("Alice", 9910)
         browser = webdriver.Firefox(executable_path=GeckoDriverManager().install())
         characters["Alice"]["browser"] = browser
+        browser.test_entry = functools.partial(
+            self._test_entry, "alice.example:9910", browser
+        )
         yield browser
 
     @pytest.fixture(scope="class")
@@ -115,6 +124,21 @@ class TestIndieAuthDocs:
         browser = webdriver.Firefox(executable_path=GeckoDriverManager().install())
         characters["Bob"]["browser"] = browser
         yield browser
+
+    def _test_entry(self, character, browser, entry):
+        """Create an entry, fetch permalink and return parsed mf2json."""
+        response = requests.post(
+            f"http://{character}/pub", {"type": ["h-entry"], "properties": entry}
+        )
+        print(response.text)
+        resource = browser.get(response.headers["Location"])
+        # pathlib.Path("server.html").unlink(missing_ok=True)
+        # pathlib.Path("entry.html").unlink(missing_ok=True)
+        # with open("server.html", "w") as fp:
+        #     fp.write(str(response.text))
+        # with open("entry.html", "w") as fp:
+        #     fp.write(str(resource.text))
+        return resource.mf2json["items"][0]["properties"]
 
     def test_claim(self, alice, bob):
         alice.get("http://alice.example:9910")
@@ -144,6 +168,23 @@ class TestIndieAuthDocs:
         alice.find_element_by_css_selector("button[value=signin]").click()
         bob.find_element_by_css_selector("button[value=signin]").click()
         shot("Signed in", "Alice", "Bob")
+
+    def test_pub(self, alice, bob):
+        alice.get("http://alice.example:9910/pub")
+        bob.get("http://bob.example:9911/pub")
+        shot("Navigate to your content pub", "Alice", "Bob")
+        # alice.find_element_by_css_selector("button[value=signin]").click()
+        # bob.find_element_by_css_selector("button[value=signin]").click()
+        # shot("Signed in", "Alice", "Bob")
+
+    # def test_create_simple_note(self, alice, bob):
+    #     """Create a simple note."""
+    #     request = {"content": "test content"}
+    #     desired = {
+    #         "content": [{"html": "<p>test content </p>", "value": "test content"}]
+    #     }
+    #     parsed = alice.test_entry(request)
+    #     assert desired["content"] == parsed["content"]
 
 
 # class TestIndieAuth:

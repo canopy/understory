@@ -6,14 +6,11 @@ import random
 import pendulum
 import sh
 import vobject
-
 from understory import web
 from understory.web import tx
 
 from .. import webmention
-
 from .util import discover_post_type
-
 
 server = web.application(
     "MicropubServer",
@@ -1024,9 +1021,7 @@ class MediaEndpoint:
             mid = tx.db.select("media", where="sha256 = ?", vals=[sha256])[0]["mid"]
             filename.unlink()
         path = f"/pub/media/{mid}"
-        raise web.Created(
-            f"File can be found at <a href={path}>{path}</a>", location=path
-        )
+        raise web.Created(f"File can be found at <a href={path}>{path}</a>", path)
 
 
 @server.route(r"media/{filename}")

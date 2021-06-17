@@ -12,7 +12,6 @@ root = web.application("IndieAuth", mount_prefix="auth", db=False, client_id=r"[
 server = web.application(
     "IndieAuthServer", mount_prefix="auth/sign-ins", db=False, client_id=r"[\w/.]+"
 )
-profile = web.application("IndieAuthProfile", db=False)
 client = web.application("IndieAuthClient", mount_prefix="auth/visitors", db=False)
 templates = web.templates(__name__)
 
@@ -353,14 +352,6 @@ class Client:
             order="redirect_uri, initiated DESC",
         )
         return templates.client(auths)
-
-
-@profile.route(r"")
-class Profile:
-    """A basic identity profile."""
-
-    def get(self):
-        return templates.profile(get_owner())
 
 
 @client.route(r"")

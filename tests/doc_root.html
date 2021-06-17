@@ -3,11 +3,6 @@ $def with (characters, toc, story)
 <html>
 <head>
 <title>Canopy/Understory</title>
-<base href="https://media.githubusercontent.com/media/canopy/understory/main/docs/">
-<script>
-if (window.location.href.startsWith("file:///"))
-    document.querySelector("base").href = ""
-</script>
 <style>
 body {
     background-color: #002b36;
@@ -51,5 +46,13 @@ $:story
 <h2>Map</h2>
 <p>The API..</p>
 </article>
+<script>
+if (window.location.href.startsWith("file:///")) {
+  document.querySelectorAll("img").forEach((el) => {
+    parts = el.src.split("/")
+    el.src = parts[parts.length - 1]
+  })
+}
+</script>
 </body>
 </html>
