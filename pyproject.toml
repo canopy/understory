@@ -11,6 +11,20 @@ Homepage = "https://github.com/canopy/understory"
 
 [tool.poetry.scripts]
 loveliness = "understory.loveliness:main"
+# indieauth = "understory.indieweb.indieauth:main"
+# micropub = "understory.indieweb.micropub:main"
+# microsub = "understory.indieweb.microsub:main"
+# followers = "understory.indieweb.followers:main"
+# mentions = "understory.indieweb.webmention:main"
+
+[tool.poetry.plugins."web.apps"]
+content = "understory.indieweb:content"
+"indieauth-client" = "understory.indieweb.indieauth:client"
+"indieauth-server" = "understory.indieweb.indieauth:server"
+micropub = "understory.indieweb.micropub:server"
+microsub = "understory.indieweb.microsub:server"
+webmention = "understory.indieweb.webmention:receiver"
+websub = "understory.indieweb.websub:hub"
 
 [tool.poetry.dependencies]
 python = "^3.7"
