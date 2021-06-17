@@ -21,15 +21,14 @@ from understory.web import tx
 from webdriver_manager.firefox import GeckoDriverManager
 
 characters = {"Alice": {}, "Bob": {}}  # XXX , "Carol": {}, "Dan": {}}
-docs_dir = pathlib.Path(__file__).parent.parent / "docs"
 tests_dir = pathlib.Path(__file__).parent
+docs_dir = tests_dir.parent / "docs"
 scenes = []
 
 
 def setup_module(module):
     """Clean up previous run."""
     pathlib.Path("test-alice.db").unlink(missing_ok=True)
-    pathlib.Path("test-aliceselenium.db").unlink(missing_ok=True)
     pathlib.Path("test-bob.db").unlink(missing_ok=True)
     for png in docs_dir.glob("*.png"):
         png.unlink()
@@ -41,14 +40,15 @@ def teardown_module(module):
         details["browser"].quit()
     toc = ""
     story = ""
-    for index, (who, caption, slug) in enumerate(scenes):
-        toc += f"<li><a href=#{slug}>{caption}</a></li>"
-        story += (
-            f"<section id={slug}>"
-            f"<h2>{caption}</h2>"
-            # f"<p><small>{', '.join(who)}</small>{description}</p>"
-            f"<div class=storyboard>"
-        )
+    for index, (who, caption, description, slug) in enumerate(scenes):
+        if caption:
+            toc += f"<li><a href=#{slug}>{caption}</a></li>"
+        story += f"<section id={slug}>"
+        if caption:
+            story += f"<h2>{caption}</h2>"
+        if description:
+            story += f"<p>{description}</p>"
+        story += f"<div class=storyboard>"
         for character in sorted(characters.keys()):
             if character in who:
                 url = (
@@ -58,18 +58,19 @@ def teardown_module(module):
                 story += f"<a href={url}><img src={url}></a>"
             else:
                 story += "<div class=filler></div>"
-        story += f"</div>" f"</section>"
+        story += f"</div></section>"
+    now = web.utcnow()
     with (docs_dir / "index.html").open("w") as output_fp:
         with (tests_dir / "doc_root.html").open() as template_fp:
-            output_fp.write(str(web.template(template_fp)(characters, toc, story)))
+            output_fp.write(str(web.template(template_fp)(now, characters, toc, story)))
 
 
-def shot(caption, *involved):
+def shot(caption, description, *involved):
     slug = caption.replace(" ", "_").lower()
     for character in involved:
         path = docs_dir / f"{len(scenes):03}_{character}_{slug}.png"
         characters[character]["browser"].save_screenshot(str(path))
-    scenes.append((involved, caption, slug))
+    scenes.append((involved, caption, description, slug))
 
 
 def gen_app(name, port) -> web.Application:
@@ -91,6 +92,7 @@ def gen_app(name, port) -> web.Application:
             indieweb.indieauth.client,
             indieweb.indieauth.root,
             indieweb.micropub.server,
+            indieweb.webmention.receiver,
             indieweb.content,
         ),
         wrappers=(
@@ -99,6 +101,7 @@ def gen_app(name, port) -> web.Application:
             indieweb.indieauth.wrap_server,
             indieweb.indieauth.wrap_client,
             indieweb.micropub.wrap_server,
+            indieweb.webmention.wrap_receiver,
         ),
     )
 
@@ -111,6 +114,7 @@ class TestIndieAuthDocs:
         """Serve Alice's site and yield her browser."""
         alice_app = gen_app("Alice", 9910)
         browser = webdriver.Firefox(executable_path=GeckoDriverManager().install())
+        browser.set_window_size(800, 600)
         characters["Alice"]["browser"] = browser
         browser.test_entry = functools.partial(
             self._test_entry, "alice.example:9910", browser
@@ -122,6 +126,7 @@ class TestIndieAuthDocs:
         """Serve Bob's site and yield his browser."""
         alice_app = gen_app("Bob", 9911)
         browser = webdriver.Firefox(executable_path=GeckoDriverManager().install())
+        browser.set_window_size(800, 600)
         characters["Bob"]["browser"] = browser
         yield browser
 
@@ -130,14 +135,7 @@ class TestIndieAuthDocs:
         response = requests.post(
             f"http://{character}/pub", {"type": ["h-entry"], "properties": entry}
         )
-        print(response.text)
         resource = browser.get(response.headers["Location"])
-        # pathlib.Path("server.html").unlink(missing_ok=True)
-        # pathlib.Path("entry.html").unlink(missing_ok=True)
-        # with open("server.html", "w") as fp:
-        #     fp.write(str(response.text))
-        # with open("entry.html", "w") as fp:
-        #     fp.write(str(resource.text))
         return resource.mf2json["items"][0]["properties"]
 
     def test_claim(self, alice, bob):
@@ -147,15 +145,25 @@ class TestIndieAuthDocs:
         bob.get("http://bob.example:9911")
         bob_name = bob.find_element_by_name("name")
         bob_name.send_keys("Bob")
-        shot("Claim your site", "Alice", "Bob")
+        shot(
+            "Claim your domain",
+            "Visit your app's address in a browser to claim it.",
+            "Alice",
+            "Bob",
+        )
 
         alice_name.submit()
         bob_name.submit()
-        shot("Write your passphrase down on a piece of paper", "Alice", "Bob")
+        shot(
+            "Write down your passphrase",
+            "Save this somewhere not on your computer.",
+            "Alice",
+            "Bob",
+        )
 
         alice.get("http://alice.example:9910")
         bob.get("http://bob.example:9911")
-        shot("Check your homepage", "Alice", "Bob")
+        shot("Check your homepage", "You're live!", "Alice", "Bob")
 
     def test_sign_in_to_each_other(self, alice, bob):
         alice.get(
@@ -164,21 +172,49 @@ class TestIndieAuthDocs:
         bob.get(
             "http://alice.example:9910/auth/visitors/sign-in?me=http://bob.example:9911"
         )
-        shot("Sign in to each other's site", "Alice", "Bob")
+        shot(
+            "Sign in to each other's site",
+            """When you use IndieAuth to sign in to a friend's website you're going to
+            a) confirm that your website is who it says it is and
+            b) provide your friend with a secret token for later use.""",
+            "Alice",
+            "Bob",
+        )
         alice.find_element_by_css_selector("button[value=signin]").click()
         bob.find_element_by_css_selector("button[value=signin]").click()
-        shot("Signed in", "Alice", "Bob")
+        shot("Signed in", "Once signed in you will see private posts.", "Alice", "Bob")
 
-    def test_pub(self, alice, bob):
+    def test_micropub_endpoint(self, alice, bob):
         alice.get("http://alice.example:9910/pub")
         bob.get("http://bob.example:9911/pub")
-        shot("Navigate to your content pub", "Alice", "Bob")
-        # alice.find_element_by_css_selector("button[value=signin]").click()
-        # bob.find_element_by_css_selector("button[value=signin]").click()
-        # shot("Signed in", "Alice", "Bob")
+        shot(
+            "Go to your content pub for access to posts",
+            "All of your content stored in one place, accessible via Micropub.",
+            "Alice",
+            "Bob",
+        )
+
+    def test_webmention_receiver(self, alice, bob):
+        alice.get("http://alice.example:9910/mentions")
+        bob.get("http://bob.example:9911/mentions")
+        shot(
+            "Check your received mentions",
+            "Mentions from other websites appear here.",
+            "Alice",
+            "Bob",
+        )
+
+    def test_generate_personal_access_token(self, alice, bob):
+        alice.get("http://alice.example:9910/auth")
+        shot(
+            "Generate a personal access token",
+            """Manually acquire a token to use from eg. a command line program.""",
+            "Alice",
+        )
+        alice.find_element_by_css_selector("button").click()
+        shot("", "", "Alice")
 
     # def test_create_simple_note(self, alice, bob):
-    #     """Create a simple note."""
     #     request = {"content": "test content"}
     #     desired = {
     #         "content": [{"html": "<p>test content </p>", "value": "test content"}]

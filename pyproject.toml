@@ -19,6 +19,11 @@ loveliness = "understory.loveliness:main"
 
 [tool.poetry.plugins."web.apps"]
 content = "understory.indieweb:content"
+# db = "understory.indieweb:db"
+# cache = "understory.indieweb:cache"
+# favicon = "understory.indieweb:favicon"
+# static = "understory.indieweb:static"
+# templates = "understory.indieweb:templates"
 "indieauth-client" = "understory.indieweb.indieauth:client"
 "indieauth-server" = "understory.indieweb.indieauth:server"
 micropub = "understory.indieweb.micropub:server"

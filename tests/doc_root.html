@@ -1,4 +1,4 @@
-$def with (characters, toc, story)
+$def with (now, characters, toc, story)
 <!doctype html>
 <html>
 <head>
@@ -10,11 +10,12 @@ body {
     margin: 4em auto;
     max-width: 60em; }
 h1 {
-    color: #859900; }
+    color: #586e75; }
 img {
     width: 100%; }
 a {
-    color: #268bd2; }
+    color: #268bd2;
+    text-decoration: none; }
 a:link {
     color: #268bd2; }
 a:visited {
@@ -30,6 +31,9 @@ a:active {
 <body>
 <h1><a href=https://github.com/canopy>Canopy</a>&thinsp;/&thinsp;<a
 href=https://github.com/canopy/understory>Understory</a></h1>
+<p><small>Last updated $now.isoformat()</small></p>
+<p>The understory implements IndieWeb technologies toward a decentralized social
+network. It underpins the canopy which is a first-class IndieWeb client.</p>
 <article>
 <h2>Take a stroll..</h2>
 <p>This is Alice and Bob starting from scratch.</p>

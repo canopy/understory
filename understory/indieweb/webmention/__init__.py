@@ -3,7 +3,6 @@
 from understory import web
 from understory.web import tx
 
-
 receiver = web.application(
     "Webmention", mount_prefix="mentions", mention_id=r"\w+"  # db=False,
 )
@@ -166,7 +165,7 @@ def store_mention(source, target):
 #     return tx.kv["mentions", path, mention_type].hset(source, mention_id)
 
 
-def wrap(handler, app):
+def wrap_receiver(handler, app):
     """Ensure endpoint link in head of root document."""
     tx.db.define(
         "mentions",
@@ -191,7 +190,7 @@ def wrap(handler, app):
         web.header("Link", '</mentions>; rel="webmention"', add=True)
 
 
-receiver.wrap(wrap, "post")
+receiver.wrap(wrap_receiver, "post")
 
 
 def get_mentions(path):
