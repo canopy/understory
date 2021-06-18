@@ -289,9 +289,8 @@ class TokenEndpoint:
                 tx.db.update(
                     "auths",
                     revoked=web.utcnow(),
+                    where="""json_extract(response, '$.access_token') = ?""",
                     vals=[form.token],
-                    where="""json_extract(response,
-                                                   '$.access_token') = ?""",
                 )
                 raise web.OK("")
         except web.BadRequest:

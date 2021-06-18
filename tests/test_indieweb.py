@@ -12,10 +12,15 @@ monkey.patch_all()
 import functools
 import pathlib
 import textwrap
+import time
 
 import pytest
 import requests
+from PIL import ImageGrab
 from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.ui import WebDriverWait
 from understory import indieweb, kv, sql, web  # type: ignore
 from understory.web import tx
 from webdriver_manager.firefox import GeckoDriverManager
@@ -65,11 +70,25 @@ def teardown_module(module):
             output_fp.write(str(web.template(template_fp)(now, characters, toc, story)))
 
 
-def shot(caption, description, *involved):
+def shot(caption, description, *involved, VERTICAL_OFFSET=37):
     slug = caption.replace(" ", "_").lower()
     for character in involved:
         path = docs_dir / f"{len(scenes):03}_{character}_{slug}.png"
-        characters[character]["browser"].save_screenshot(str(path))
+        browser = characters[character]["browser"]
+        WebDriverWait(browser, 20).until(
+            EC.presence_of_element_located((By.ID, "PAGE_LOADED"))
+        )
+        time.sleep(0.25)
+        rect = browser.get_window_rect()
+        with path.open("wb") as fp:
+            ImageGrab.grab(
+                bbox=[
+                    rect["x"],
+                    rect["y"] + VERTICAL_OFFSET,
+                    rect["x"] + rect["width"],
+                    rect["y"] + rect["height"] + VERTICAL_OFFSET,
+                ]
+            ).save(fp)
     scenes.append((involved, caption, description, slug))
 
 
@@ -82,6 +101,27 @@ def gen_app(name, port) -> web.Application:
         tx.host.cache = web.cache(db=db)
         tx.host.kv = kv.db(f"test-{name.lower()}", ":", {"jobs": "list"})
         yield
+        if (
+            tx.response.status == "200 OK"
+            and str(tx.response.headers["Content-Type"]) != "application/json"
+        ):
+            doc = web.parse("<!doctype html>" + str(tx.response.body))
+            try:
+                body = doc.select("body")[0]
+            except IndexError:
+                pass
+            else:
+                body.append(
+                    """<script>
+                    document.addEventListener('DOMContentLoaded', () => {
+                      const div = document.createElement('div');
+                      div.id = 'PAGE_LOADED';
+                      document.body.appendChild(div);
+                    })
+                    </script>""",
+                )
+                tx.response.headers["Content-Type"] = "text/html"
+                tx.response.body = doc.html
 
     return web.application(
         name,
@@ -114,7 +154,7 @@ class TestIndieAuthDocs:
         """Serve Alice's site and yield her browser."""
         alice_app = gen_app("Alice", 9910)
         browser = webdriver.Firefox(executable_path=GeckoDriverManager().install())
-        browser.set_window_size(800, 600)
+        browser.set_window_rect(x=50, y=50, width=800, height=600)
         characters["Alice"]["browser"] = browser
         browser.test_entry = functools.partial(
             self._test_entry, "alice.example:9910", browser
@@ -126,7 +166,7 @@ class TestIndieAuthDocs:
         """Serve Bob's site and yield his browser."""
         alice_app = gen_app("Bob", 9911)
         browser = webdriver.Firefox(executable_path=GeckoDriverManager().install())
-        browser.set_window_size(800, 600)
+        browser.set_window_rect(x=900, y=50, width=800, height=600)
         characters["Bob"]["browser"] = browser
         yield browser
 
@@ -204,15 +244,15 @@ class TestIndieAuthDocs:
             "Bob",
         )
 
-    def test_generate_personal_access_token(self, alice, bob):
-        alice.get("http://alice.example:9910/auth")
-        shot(
-            "Generate a personal access token",
-            """Manually acquire a token to use from eg. a command line program.""",
-            "Alice",
-        )
-        alice.find_element_by_css_selector("button").click()
-        shot("", "", "Alice")
+    # def test_generate_personal_access_token(self, alice, bob):
+    #     alice.get("http://alice.example:9910/auth")
+    #     shot(
+    #         "Generate a personal access token",
+    #         """Manually acquire a token to use from eg. a command line program.""",
+    #         "Alice",
+    #     )
+    #     alice.find_element_by_css_selector("button").click()
+    #     shot("", "", "Alice")
 
     # def test_create_simple_note(self, alice, bob):
     #     request = {"content": "test content"}
