@@ -1,13 +1,17 @@
 <!doctype html>
 <html>
 <head>
-<title>Canopy/Understory</title>
+<title>Canopy / Understory</title>
+<link rel="preconnect" href="https://fonts.gstatic.com">
+<link href="https://fonts.googleapis.com/css2?family=Faustina&display=swap" rel="stylesheet">
 <style>
 body {
     background-color: #002b36;
     color: #839496;
+    font-family: 'Faustina', sans-serif;
+    font-size: 18px;
     margin: 4em auto;
-    max-width: 60em; }
+    max-width: 50em; }
 h1 {
     color: #586e75; }
 img {
@@ -27,30 +31,45 @@ a:active {
 /* section {{ margin: 6em 0; }} */
 </style>
 </head>
-<body>
-<h1><a href=https://github.com/canopy>Canopy</a>&thinsp;/&thinsp;<a
-href=https://github.com/canopy/understory>Understory</a></h1>
-<p><small>Last updated 2021-06-17T23:45:16.985985+00:00</small></p>
-<p>The understory implements IndieWeb technologies toward a decentralized social
-network. It underpins the canopy which is a first-class IndieWeb client.</p>
-<article>
-<h2>Take a stroll..</h2>
-<p>This is Alice and Bob starting from scratch.</p>
-<nav>
-<ol>
-<li><a href=#claim_your_domain>Claim your domain</a></li><li><a href=#write_down_your_passphrase>Write down your passphrase</a></li><li><a href=#check_your_homepage>Check your homepage</a></li><li><a href=#sign_in_to_each_other's_site>Sign in to each other's site</a></li><li><a href=#signed_in>Signed in</a></li><li><a href=#go_to_your_content_pub_for_access_to_posts>Go to your content pub for access to posts</a></li><li><a href=#check_your_received_mentions>Check your received mentions</a></li><li><a href=#generate_a_personal_access_token>Generate a personal access token</a></li>
-</ol>
-</nav>
-<section>
-<section id=claim_your_domain><h2>Claim your domain</h2><p>Visit your app's address in a browser to claim it.</p><div class=storyboard><a href=https://media.githubusercontent.com/media/canopy/understory/main/docs/000_Alice_claim_your_domain.png><img src=https://media.githubusercontent.com/media/canopy/understory/main/docs/000_Alice_claim_your_domain.png></a><a href=https://media.githubusercontent.com/media/canopy/understory/main/docs/000_Bob_claim_your_domain.png><img src=https://media.githubusercontent.com/media/canopy/understory/main/docs/000_Bob_claim_your_domain.png></a></div></section><section id=write_down_your_passphrase><h2>Write down your passphrase</h2><p>Save this somewhere not on your computer.</p><div class=storyboard><a href=https://media.githubusercontent.com/media/canopy/understory/main/docs/001_Alice_write_down_your_passphrase.png><img src=https://media.githubusercontent.com/media/canopy/understory/main/docs/001_Alice_write_down_your_passphrase.png></a><a href=https://media.githubusercontent.com/media/canopy/understory/main/docs/001_Bob_write_down_your_passphrase.png><img src=https://media.githubusercontent.com/media/canopy/understory/main/docs/001_Bob_write_down_your_passphrase.png></a></div></section><section id=check_your_homepage><h2>Check your homepage</h2><p>You're live!</p><div class=storyboard><a href=https://media.githubusercontent.com/media/canopy/understory/main/docs/002_Alice_check_your_homepage.png><img src=https://media.githubusercontent.com/media/canopy/understory/main/docs/002_Alice_check_your_homepage.png></a><a href=https://media.githubusercontent.com/media/canopy/understory/main/docs/002_Bob_check_your_homepage.png><img src=https://media.githubusercontent.com/media/canopy/understory/main/docs/002_Bob_check_your_homepage.png></a></div></section><section id=sign_in_to_each_other's_site><h2>Sign in to each other's site</h2><p>When you use IndieAuth to sign in to a friend's website you're going to
+<body class=h-entry>
+<h1 class="p-name u-url"><a href=/>Understory Stream</a></h1>
+<p><small>Last updated <time class=dt-updated
+datetime="2021-06-18T00:17:40.707106Z">Jun 18, 2021</time> by <a
+class="p-author h-card" href=https://angelogladding.com>Angelo Gladding</a></small></p>
+<p class=p-summary>The <a href=https://github.com/canopy/understory>understory</a>
+implements IndieWeb technologies. The <a href=https://github.com/canopy>canopy</a>
+uses the understory to provide an easy to use first-class IndieWeb "client".</p>
+<ul>
+    <li><a href=#map>Read the Map</a></li>
+    <li><a href=#stroll>Take a Stroll</a></li>
+    <li><a href=#plant>Plant your Tree</a></li>
+</ul>
+<div class=e-content>
+    <article>
+    <h2 id=map>Read the Map</h2>
+    <p>The API..</p>
+    <p>Test results..</p>
+    <h2 id=stroll>Take a Stroll</h2>
+    <p>This is Alice and Bob using separately mounted IndieWeb applications
+    to communicate.</p>
+    <nav>
+    <ol>
+    <li><a href=#claim_your_domain>Claim your domain</a></li><li><a href=#write_down_your_passphrase>Write down your passphrase</a></li><li><a href=#check_your_homepage>Check your homepage</a></li><li><a href=#sign_in_to_each_other's_site>Sign in to each other's site</a></li><li><a href=#signed_in>Signed in</a></li><li><a href=#go_to_your_content_pub_for_access_to_posts>Go to your content pub for access to posts</a></li><li><a href=#check_your_received_mentions>Check your received mentions</a></li><li><a href=#generate_a_personal_access_token>Generate a personal access token</a></li>
+    </ol>
+    </nav>
+    <section>
+    <section id=claim_your_domain><h3>Claim your domain</h3><p>Visit your app's address in a browser to claim it.</p><div class=storyboard><a href=https://media.githubusercontent.com/media/canopy/understory/main/docs/000_Alice_claim_your_domain.png><img src=https://media.githubusercontent.com/media/canopy/understory/main/docs/000_Alice_claim_your_domain.png></a><a href=https://media.githubusercontent.com/media/canopy/understory/main/docs/000_Bob_claim_your_domain.png><img src=https://media.githubusercontent.com/media/canopy/understory/main/docs/000_Bob_claim_your_domain.png></a></div></section><section id=write_down_your_passphrase><h3>Write down your passphrase</h3><p>Save this somewhere not on your computer.</p><div class=storyboard><a href=https://media.githubusercontent.com/media/canopy/understory/main/docs/001_Alice_write_down_your_passphrase.png><img src=https://media.githubusercontent.com/media/canopy/understory/main/docs/001_Alice_write_down_your_passphrase.png></a><a href=https://media.githubusercontent.com/media/canopy/understory/main/docs/001_Bob_write_down_your_passphrase.png><img src=https://media.githubusercontent.com/media/canopy/understory/main/docs/001_Bob_write_down_your_passphrase.png></a></div></section><section id=check_your_homepage><h3>Check your homepage</h3><p>You're live!</p><div class=storyboard><a href=https://media.githubusercontent.com/media/canopy/understory/main/docs/002_Alice_check_your_homepage.png><img src=https://media.githubusercontent.com/media/canopy/understory/main/docs/002_Alice_check_your_homepage.png></a><a href=https://media.githubusercontent.com/media/canopy/understory/main/docs/002_Bob_check_your_homepage.png><img src=https://media.githubusercontent.com/media/canopy/understory/main/docs/002_Bob_check_your_homepage.png></a></div></section><section id=sign_in_to_each_other's_site><h3>Sign in to each other's site</h3><p>When you use IndieAuth to sign in to a friend's website you're going to
             a) confirm that your website is who it says it is and
-            b) provide your friend with a secret token for later use.</p><div class=storyboard><a href=https://media.githubusercontent.com/media/canopy/understory/main/docs/003_Alice_sign_in_to_each_other's_site.png><img src=https://media.githubusercontent.com/media/canopy/understory/main/docs/003_Alice_sign_in_to_each_other's_site.png></a><a href=https://media.githubusercontent.com/media/canopy/understory/main/docs/003_Bob_sign_in_to_each_other's_site.png><img src=https://media.githubusercontent.com/media/canopy/understory/main/docs/003_Bob_sign_in_to_each_other's_site.png></a></div></section><section id=signed_in><h2>Signed in</h2><p>Once signed in you will see private posts.</p><div class=storyboard><a href=https://media.githubusercontent.com/media/canopy/understory/main/docs/004_Alice_signed_in.png><img src=https://media.githubusercontent.com/media/canopy/understory/main/docs/004_Alice_signed_in.png></a><a href=https://media.githubusercontent.com/media/canopy/understory/main/docs/004_Bob_signed_in.png><img src=https://media.githubusercontent.com/media/canopy/understory/main/docs/004_Bob_signed_in.png></a></div></section><section id=go_to_your_content_pub_for_access_to_posts><h2>Go to your content pub for access to posts</h2><p>All of your content stored in one place, accessible via Micropub.</p><div class=storyboard><a href=https://media.githubusercontent.com/media/canopy/understory/main/docs/005_Alice_go_to_your_content_pub_for_access_to_posts.png><img src=https://media.githubusercontent.com/media/canopy/understory/main/docs/005_Alice_go_to_your_content_pub_for_access_to_posts.png></a><a href=https://media.githubusercontent.com/media/canopy/understory/main/docs/005_Bob_go_to_your_content_pub_for_access_to_posts.png><img src=https://media.githubusercontent.com/media/canopy/understory/main/docs/005_Bob_go_to_your_content_pub_for_access_to_posts.png></a></div></section><section id=check_your_received_mentions><h2>Check your received mentions</h2><p>Mentions from other websites appear here.</p><div class=storyboard><a href=https://media.githubusercontent.com/media/canopy/understory/main/docs/006_Alice_check_your_received_mentions.png><img src=https://media.githubusercontent.com/media/canopy/understory/main/docs/006_Alice_check_your_received_mentions.png></a><a href=https://media.githubusercontent.com/media/canopy/understory/main/docs/006_Bob_check_your_received_mentions.png><img src=https://media.githubusercontent.com/media/canopy/understory/main/docs/006_Bob_check_your_received_mentions.png></a></div></section><section id=generate_a_personal_access_token><h2>Generate a personal access token</h2><p>Manually acquire a token to use from eg. a command line program.</p><div class=storyboard><a href=https://media.githubusercontent.com/media/canopy/understory/main/docs/007_Alice_generate_a_personal_access_token.png><img src=https://media.githubusercontent.com/media/canopy/understory/main/docs/007_Alice_generate_a_personal_access_token.png></a><div class=filler></div></div></section><section id=><div class=storyboard><a href=https://media.githubusercontent.com/media/canopy/understory/main/docs/008_Alice_.png><img src=https://media.githubusercontent.com/media/canopy/understory/main/docs/008_Alice_.png></a><div class=filler></div></div></section>
-</section>
-</article>
-<article>
-<h2>Map</h2>
-<p>The API..</p>
-</article>
+            b) provide your friend with a secret token for later use.</p><div class=storyboard><a href=https://media.githubusercontent.com/media/canopy/understory/main/docs/003_Alice_sign_in_to_each_other's_site.png><img src=https://media.githubusercontent.com/media/canopy/understory/main/docs/003_Alice_sign_in_to_each_other's_site.png></a><a href=https://media.githubusercontent.com/media/canopy/understory/main/docs/003_Bob_sign_in_to_each_other's_site.png><img src=https://media.githubusercontent.com/media/canopy/understory/main/docs/003_Bob_sign_in_to_each_other's_site.png></a></div></section><section id=signed_in><h3>Signed in</h3><p>Once signed in you will see private posts.</p><div class=storyboard><a href=https://media.githubusercontent.com/media/canopy/understory/main/docs/004_Alice_signed_in.png><img src=https://media.githubusercontent.com/media/canopy/understory/main/docs/004_Alice_signed_in.png></a><a href=https://media.githubusercontent.com/media/canopy/understory/main/docs/004_Bob_signed_in.png><img src=https://media.githubusercontent.com/media/canopy/understory/main/docs/004_Bob_signed_in.png></a></div></section><section id=go_to_your_content_pub_for_access_to_posts><h3>Go to your content pub for access to posts</h3><p>All of your content stored in one place, accessible via Micropub.</p><div class=storyboard><a href=https://media.githubusercontent.com/media/canopy/understory/main/docs/005_Alice_go_to_your_content_pub_for_access_to_posts.png><img src=https://media.githubusercontent.com/media/canopy/understory/main/docs/005_Alice_go_to_your_content_pub_for_access_to_posts.png></a><a href=https://media.githubusercontent.com/media/canopy/understory/main/docs/005_Bob_go_to_your_content_pub_for_access_to_posts.png><img src=https://media.githubusercontent.com/media/canopy/understory/main/docs/005_Bob_go_to_your_content_pub_for_access_to_posts.png></a></div></section><section id=check_your_received_mentions><h3>Check your received mentions</h3><p>Mentions from other websites appear here.</p><div class=storyboard><a href=https://media.githubusercontent.com/media/canopy/understory/main/docs/006_Alice_check_your_received_mentions.png><img src=https://media.githubusercontent.com/media/canopy/understory/main/docs/006_Alice_check_your_received_mentions.png></a><a href=https://media.githubusercontent.com/media/canopy/understory/main/docs/006_Bob_check_your_received_mentions.png><img src=https://media.githubusercontent.com/media/canopy/understory/main/docs/006_Bob_check_your_received_mentions.png></a></div></section><section id=generate_a_personal_access_token><h3>Generate a personal access token</h3><p>Manually acquire a token to use from eg. a command line program.</p><div class=storyboard><a href=https://media.githubusercontent.com/media/canopy/understory/main/docs/007_Alice_generate_a_personal_access_token.png><img src=https://media.githubusercontent.com/media/canopy/understory/main/docs/007_Alice_generate_a_personal_access_token.png></a><div class=filler></div></div></section><section id=><div class=storyboard><a href=https://media.githubusercontent.com/media/canopy/understory/main/docs/008_Alice_.png><img src=https://media.githubusercontent.com/media/canopy/understory/main/docs/008_Alice_.png></a><div class=filler></div></div></section>
+    </section>
+    </article>
+    <article>
+    <h2 id=plant>Plant your Tree</h2>
+    <p>Simple example..</p>
+    </article>
+    <article>
+    </article>
+</div>
 <script>
 if (window.location.href.startsWith("file:///")) {
   document.querySelectorAll("img").forEach((el) => {

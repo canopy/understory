@@ -45,7 +45,7 @@ def teardown_module(module):
             toc += f"<li><a href=#{slug}>{caption}</a></li>"
         story += f"<section id={slug}>"
         if caption:
-            story += f"<h2>{caption}</h2>"
+            story += f"<h3>{caption}</h3>"
         if description:
             story += f"<p>{description}</p>"
         story += f"<div class=storyboard>"

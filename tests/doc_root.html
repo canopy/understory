@@ -2,13 +2,17 @@ $def with (now, characters, toc, story)
 <!doctype html>
 <html>
 <head>
-<title>Canopy/Understory</title>
+<title>Canopy / Understory</title>
+<link rel="preconnect" href="https://fonts.gstatic.com">
+<link href="https://fonts.googleapis.com/css2?family=Faustina&display=swap" rel="stylesheet">
 <style>
 body {
     background-color: #002b36;
     color: #839496;
+    font-family: 'Faustina', sans-serif;
+    font-size: 18px;
     margin: 4em auto;
-    max-width: 60em; }
+    max-width: 50em; }
 h1 {
     color: #586e75; }
 img {
@@ -28,28 +32,43 @@ a:active {
 /* section {{ margin: 6em 0; }} */
 </style>
 </head>
-<body>
-<h1><a href=https://github.com/canopy>Canopy</a>&thinsp;/&thinsp;<a
-href=https://github.com/canopy/understory>Understory</a></h1>
-<p><small>Last updated $now.isoformat()</small></p>
-<p>The understory implements IndieWeb technologies toward a decentralized social
-network. It underpins the canopy which is a first-class IndieWeb client.</p>
-<article>
-<h2>Take a stroll..</h2>
-<p>This is Alice and Bob starting from scratch.</p>
-<nav>
-<ol>
-$:toc
-</ol>
-</nav>
-<section>
-$:story
-</section>
-</article>
-<article>
-<h2>Map</h2>
-<p>The API..</p>
-</article>
+<body class=h-entry>
+<h1 class="p-name u-url"><a href=/>Understory Stream</a></h1>
+<p><small>Last updated <time class=dt-updated
+datetime="$now.to_iso8601_string()">$now.to_formatted_date_string()</time> by <a
+class="p-author h-card" href=https://angelogladding.com>Angelo Gladding</a></small></p>
+<p class=p-summary>The <a href=https://github.com/canopy/understory>understory</a>
+implements IndieWeb technologies. The <a href=https://github.com/canopy>canopy</a>
+uses the understory to provide an easy to use first-class IndieWeb "client".</p>
+<ul>
+    <li><a href=#map>Read the Map</a></li>
+    <li><a href=#stroll>Take a Stroll</a></li>
+    <li><a href=#plant>Plant your Tree</a></li>
+</ul>
+<div class=e-content>
+    <article>
+    <h2 id=map>Read the Map</h2>
+    <p>The API..</p>
+    <p>Test results..</p>
+    <h2 id=stroll>Take a Stroll</h2>
+    <p>This is Alice and Bob using separately mounted IndieWeb applications
+    to communicate.</p>
+    <nav>
+    <ol>
+    $:toc
+    </ol>
+    </nav>
+    <section>
+    $:story
+    </section>
+    </article>
+    <article>
+    <h2 id=plant>Plant your Tree</h2>
+    <p>Simple example..</p>
+    </article>
+    <article>
+    </article>
+</div>
 <script>
 if (window.location.href.startsWith("file:///")) {
   document.querySelectorAll("img").forEach((el) => {
