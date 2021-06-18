@@ -60,6 +60,7 @@ def teardown_module(module):
                     f"https://media.githubusercontent.com/media/canopy/understory/"
                     f"main/docs/{index:03}_{character}_{slug}.png"
                 )
+                story += f"<div class=character-name>{character}</div>"
                 story += f"<a href={url}><img src={url}></a>"
             else:
                 story += "<div class=filler></div>"
