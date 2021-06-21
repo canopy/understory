@@ -79,7 +79,7 @@ def shot(caption, description, *involved, VERTICAL_OFFSET=37):
         WebDriverWait(browser, 20).until(
             EC.presence_of_element_located((By.ID, "PAGE_LOADED"))
         )
-        time.sleep(0.25)
+        time.sleep(0.5)
         rect = browser.get_window_rect()
         with path.open("wb") as fp:
             ImageGrab.grab(
@@ -93,7 +93,7 @@ def shot(caption, description, *involved, VERTICAL_OFFSET=37):
     scenes.append((involved, caption, description, slug))
 
 
-def gen_app(name, port) -> web.Application:
+def gen_app(name: str, port: int = None) -> web.Application:
     def wrap(handler, app):
         db = sql.db(f"test-{name.lower()}.db")
         db.define("sessions", **web.session_table_sql)
@@ -102,10 +102,9 @@ def gen_app(name, port) -> web.Application:
         tx.host.cache = web.cache(db=db)
         tx.host.kv = kv.db(f"test-{name.lower()}", ":", {"jobs": "list"})
         yield
-        if (
-            tx.response.status == "200 OK"
-            and str(tx.response.headers["Content-Type"]) != "application/json"
-        ):
+        if tx.response.status == "200 OK" and not str(
+            tx.response.headers["Content-Type"]
+        ).startswith("application"):
             doc = web.parse("<!doctype html>" + str(tx.response.body))
             try:
                 body = doc.select("body")[0]
@@ -133,6 +132,7 @@ def gen_app(name, port) -> web.Application:
             indieweb.indieauth.client,
             indieweb.indieauth.root,
             indieweb.micropub.server,
+            indieweb.micropub.text_client,
             indieweb.webmention.receiver,
             indieweb.content,
         ),
@@ -254,6 +254,22 @@ class TestIndieAuthDocs:
     #     )
     #     alice.find_element_by_css_selector("button").click()
     #     shot("", "", "Alice")
+
+    def test_create_text_post(self, alice, bob):
+        alice.get("http://alice.example:9910/editors/text")
+        content = alice.find_element_by_css_selector("textarea[name=content]")
+        content.send_keys("Hello world!")
+        shot(
+            "Write your first post",
+            """""",
+            "Alice",
+        )
+        content.submit()
+        shot(
+            "",
+            "",
+            "Alice",
+        )
 
     # def test_create_simple_note(self, alice, bob):
     #     request = {"content": "test content"}

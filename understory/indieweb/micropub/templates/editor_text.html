@@ -1,0 +1,23 @@
+<title>Text Editor</title>
+<form action=/editors/text method=post>
+$# <div><label>Name<br><input type=text name=name></label></div>
+<div><label>Content<br><textarea name=content></textarea></label></div>
+$# <div><label>Categories<br><input type=text name=category></label></div>
+$# <div><label>Channels<br><input type=text name=channel></label></div>
+<button>Create</button>
+</form>
+
+<script src=/understory.js crossorigin=anonymous></script>
+<script>
+const { MicropubClient } = understory
+const pub = new MicropubClient("/pub")
+document.querySelector("form").addEventListener("submit", (event) => {
+  event.preventDefault()
+  console.log(pub.config)
+  pub.create("entry", {
+    content: [document.querySelector("textarea[name=content]").value]
+  }, "public").then(permalink => {
+    window.location.href = permalink
+  })
+})
+</script>

@@ -20,8 +20,12 @@ def init_owner(name):
     """Initialize owner of the request domain."""
     salt, scrypt_hash, passphrase = web.generate_passphrase()
     tx.db.insert("credentials", salt=salt, scrypt_hash=scrypt_hash)
+    version = web.nbrandom(3)
     uid = str(web.uri(tx.origin))
-    tx.db.insert("identities", card={"name": [name], "uid": [uid], "url": [uid]})
+    tx.db.insert(
+        "identities",
+        card={"version": version, "name": [name], "uid": [uid], "url": [uid]},
+    )
     tx.user.session = {"uid": uid, "name": name}
     tx.host.owner = get_owner()
     return uid, passphrase

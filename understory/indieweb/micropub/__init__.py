@@ -7,10 +7,10 @@ import pendulum
 import sh
 import vobject
 from understory import web
+from understory.indieweb.util import discover_post_type
 from understory.web import tx
 
 from .. import webmention
-from .util import discover_post_type
 
 server = web.application(
     "MicropubServer",
@@ -21,14 +21,10 @@ server = web.application(
     nickname=r"[A-Za-z0-9-]+",
     filename=rf"{web.nb60_re}{{4}}.\w{{1,10}}",
 )
-content = web.application(
-    "MicropubContent",
+text_client = web.application(
+    "MicropubClient",
+    mount_prefix="editors/text",
     db=False,
-    year=r"\d{4}",
-    month=r"\d{2}",
-    day=r"\d{2}",
-    seconds=web.nb60_re + r"{,4}",
-    slug=r"[\w_-]+",
 )
 templates = web.templates(__name__)
 
@@ -179,14 +175,16 @@ class LocalClient:
         resource["published"] = [
             {"datetime": web.utcnow(), "timezone": "America/Los_Angeles"}
         ]
-        for date_prop in ("published", "updated"):
-            try:
-                resource[date_prop][0]["datetime"] = pendulum.from_format(
-                    resource[date_prop][0]["datetime"], "YYYY-MM-DDTHH:mm:ssZ"
-                )
-                # TODO assert `timezone` exists
-            except KeyError:
-                pass
+
+        # for date_prop in ("published", "updated"):
+        #     try:
+        #         resource[date_prop][0]["datetime"] = pendulum.from_format(
+        #             resource[date_prop][0]["datetime"], "YYYY-MM-DDTHH:mm:ssZ"
+        #         )
+        #         # TODO assert `timezone` exists
+        #     except KeyError:
+        #         pass
+
         # if "published" in resource:
         #     resource["published"][0]["datetime"] = \
         #         pendulum.from_format(resource["published"][0]["datetime"],
@@ -243,12 +241,7 @@ class LocalClient:
             #     textslug = follows[0]["name"]
             #     mentions.append(follows[0]["url"])
             #     tx.sub.follow(follows[0]["url"])
-            author_id = tx.db.select(
-                "resources",
-                where="""json_extract(resources.resource,
-                                                  '$.uid[0]') == ?""",
-                vals=[tx.origin],
-            )[0]["version"]
+            author_id = tx.db.select("identities")[0]["card"]["version"]
             resource.update(author=[author_id])
         # elif resource_type == "event":
         #     slug = resource.get("nickname", resource.get("name"))[0]
@@ -315,7 +308,7 @@ class LocalClient:
                 raise web.NotFound(templates.post_not_found(url))
         r = resource["resource"]
         if "entry" in r["type"]:
-            r["author"] = self.get_version(r["author"][0])["resource"]
+            r["author"] = self.get_identity(r["author"][0])["card"]
         return resource
 
     def update(self, url, add=None, replace=None, remove=None):
@@ -345,6 +338,14 @@ class LocalClient:
                    OR json_extract(resources.resource,
                        '$.like-of[0].url') == ?"""
         return tx.db.select("resources", vals=[query, query], where=where)
+
+    def get_identity(self, version):
+        """Return a snapshot of an identity at given version."""
+        return tx.db.select(
+            "identities",
+            where="json_extract(identities.card, '$.version') == ?",
+            vals=[version],
+        )[0]
 
     def get_version(self, version):
         """Return a snapshot of resource at given version."""
@@ -501,6 +502,7 @@ class MicropubEndpoint:
         return response
 
     def post(self):
+        # TODO check for bearer token or session cookie
         try:
             form = web.form("h")
         except web.BadRequest:
@@ -1055,13 +1057,9 @@ class MediaFile:
         return "deleted"
 
 
-@content.route(r"{year}/{month}/{day}/{seconds}(/{slug})?")
-class Permalink:
-    """An individual entry."""
+@text_client.route(r"")
+class MicropubTextClient:
+    """."""
 
     def get(self):
-        resource = tx.pub.read(tx.request.uri.path)["resource"]
-        if resource["visibility"] == "private" and not tx.user.session:
-            raise web.Unauthorized(f"/auth?return_to={tx.request.uri.path}")
-        # mentions = web.indie.webmention.get_mentions(str(tx.request.uri))
-        return templates.entry(resource)  # , mentions)
+        return templates.editor_text()
