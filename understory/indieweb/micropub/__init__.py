@@ -255,7 +255,7 @@ class LocalClient:
         def generate_trailer():
             letterspace = "abcdefghijkmnopqrstuvwxyz23456789"
             trailer = "".join([random.choice(letterspace) for i in range(2)])
-            if trailer in ("bs",):
+            if trailer in ("bs", "ok", "hi", "oz", "lb"):
                 return generate_trailer()
             else:
                 return trailer
