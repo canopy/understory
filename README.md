@@ -5,6 +5,10 @@ The tools that power the canopy
 
     pip install understory
 
+and/or
+
+    npm install understory.js
+
 ## Usage
 
 ### A simple web application

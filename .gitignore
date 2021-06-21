@@ -1,4 +1,5 @@
 geckodriver.log
 poetry.lock
+package-lock.json
 .coverage
 test_results.xml
