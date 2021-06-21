@@ -167,7 +167,11 @@ class TestIndieAuthDocs:
         """Serve Bob's site and yield his browser."""
         alice_app = gen_app("Bob", 9911)
         browser = webdriver.Firefox(executable_path=GeckoDriverManager().install())
-        browser.set_window_rect(x=900, y=50, width=800, height=600)
+        while True:
+            browser.set_window_rect(x=900, y=50, width=800, height=600)
+            time.sleep(1)
+            if browser.get_window_rect()["x"] == 900:
+                break
         characters["Bob"]["browser"] = browser
         yield browser
 
