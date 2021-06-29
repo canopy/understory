@@ -2,7 +2,7 @@
   "name": "understory.js",
   "version": "0.0.1",
   "description": "The tools that power the canopy",
-  "main": "index.js",
+  "main": "understory.js",
   "directories": {
     "doc": "docs",
     "test": "tests"

@@ -290,13 +290,8 @@ class MicropubClient {
     if (typeof token !== 'undefined') {
       this.headers.authorization = `Bearer ${token}`
     }
-    fetch(this.endpoint + '?q=config', { headers: this.headers }).then(response => {
-      if (response.status === 200 || response.status === 201) {
-        return response.json().then(data => {
-          this.config = data
-        })
-      }
-    })
+
+    this.getConfig = this.getConfig.bind(this)
 
     this.create = this.create.bind(this)
     this.read = this.read.bind(this)
@@ -307,11 +302,23 @@ class MicropubClient {
     this.upload = this.upload.bind(this)
   }
 
+  getConfig () {
+    return fetch(this.endpoint + '?q=config', {
+      headers: this.headers
+    }).then(response => {
+      if (response.status === 200 || response.status === 201) {
+        return response.json().then(data => {
+          return data
+        })
+      }
+    })
+  }
+
   create (type: string, payload: object, visibility?: string) {
     const headers = this.headers
     headers['content-type'] = 'application/json'
-    if (typeof visibility !== 'undefined') {
-      visibility = 'public'
+    if (typeof visibility === 'undefined') {
+      visibility = 'private'
     }
     return fetch(this.endpoint, {
       method: 'POST',
@@ -384,14 +391,17 @@ class MicropubClient {
   }
 }
 
-// class MicrosubClient {
-//   constructor (endpoint, token) {
-//     this.endpoint = endpoint
-//     this.token = token
-//     this.followers = this.followers.bind(this)
-//     this.follow = this.follow.bind(this)
-//   }
-// 
+class MicrosubClient {
+  endpoint: string
+  token: string
+
+  constructor (endpoint, token) {
+    this.endpoint = endpoint
+    this.token = token
+    // this.followers = this.followers.bind(this)
+    // this.follow = this.follow.bind(this)
+  }
+
 //   followers (...channel) {
 //     let requestUrl = this.endpoint + 'action=follow'
 //     if (channel.length) {
@@ -441,9 +451,9 @@ class MicropubClient {
 //       }
 //     })
 //   }
-// }
+}
 
 module.exports = {
-  MicropubClient: MicropubClient
-  // MicrosubClient: MicrosubClient
+  MicropubClient: MicropubClient,
+  MicrosubClient: MicrosubClient
 }

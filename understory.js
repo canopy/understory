@@ -1,4 +1,3 @@
-var understory;
 /******/ (() => { // webpackBootstrap
 /******/ 	var __webpack_modules__ = ([
 /* 0 */
@@ -208,7 +207,7 @@ module.exports = {
 /******/ 	// Load entry module and return exports
 /******/ 	// This entry module is referenced by other modules so it can't be inlined
 /******/ 	var __webpack_exports__ = __webpack_require__(0);
-/******/ 	understory = __webpack_exports__;
+/******/ 	module.exports.understory = __webpack_exports__;
 /******/ 	
 /******/ })()
 ;
