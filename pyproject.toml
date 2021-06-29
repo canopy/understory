@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "understory"
-version = "0.0.37"
+version = "0.0.38-alpha.0"
 description = "The tools that power the canopy"
 authors = ["Angelo Gladding <angelo@lahacker.net>"]
 license = "AGPL-3.0-or-later"
@@ -33,8 +33,8 @@ websub = "understory.indieweb.websub:hub"
 
 [tool.poetry.dependencies]
 python = "^3.7"
-understory-web = "^0.0.20"
-# understory-web = {path = "../understory-web"}
+# understory-web = "^0.0.20"
+understory-web = {path = "../understory-web"}
 
 [tool.poetry.dev-dependencies]
 ipython = "^7.23.1"

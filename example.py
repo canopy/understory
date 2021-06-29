@@ -1,3 +1,4 @@
-from tests.test_indieweb import gen_app
+from understory import indieweb
 
-app = gen_app("Example")
+alice = indieweb.site("AliceExample")
+bob = indieweb.site("BobExample")

@@ -5,8 +5,6 @@ $ breadcrumbs = (p.year, p.year, p.format("MM"), p.format("MMM"),
 $                p.format("DD"), p.format("D"))
 $var breadcrumbs = breadcrumbs
 
-$entry
-
 <article class=h-entry>
 $ type = discover_post_type(entry)
 $if type == "note":
@@ -42,6 +40,14 @@ href=$a["url"][0]>$a["name"][0]</a>
 datetime="$entry['published'][0].isoformat()">\
 $entry["published"][0].diff_for_humans()</time></a></small></p>
 </article>
+
+<nav>
+$if tx.user.session:
+    $if not tx.user.is_owner:
+        <a href=$tx.user.session["uid"]/actions?reply=$entry["url"]>reply</a>
+$else:
+    <a href=web+action://reply?url=$entry["url"][0]>reply</a>
+</nav>
 
 <footer>
 $# $for mention in mentions:

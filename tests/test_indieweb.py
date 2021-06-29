@@ -16,6 +16,7 @@ import time
 
 import pytest
 import requests
+import sh
 from PIL import ImageGrab
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -33,8 +34,8 @@ scenes = []
 
 def setup_module(module):
     """Clean up previous run."""
-    pathlib.Path("test-alice.db").unlink(missing_ok=True)
-    pathlib.Path("test-bob.db").unlink(missing_ok=True)
+    pathlib.Path("alicetest.db").unlink(missing_ok=True)
+    pathlib.Path("bobtest.db").unlink(missing_ok=True)
     for png in docs_dir.glob("*.png"):
         png.unlink()
 
@@ -71,7 +72,7 @@ def teardown_module(module):
             output_fp.write(str(web.template(template_fp)(now, characters, toc, story)))
 
 
-def shot(caption, description, *involved, VERTICAL_OFFSET=37):
+def shot(caption, description, *involved):
     slug = caption.replace(" ", "_").lower()
     for character in involved:
         path = docs_dir / f"{len(scenes):03}_{character}_{slug}.png"
@@ -85,66 +86,36 @@ def shot(caption, description, *involved, VERTICAL_OFFSET=37):
             ImageGrab.grab(
                 bbox=[
                     rect["x"],
-                    rect["y"] + VERTICAL_OFFSET,
+                    rect["y"],
                     rect["x"] + rect["width"],
-                    rect["y"] + rect["height"] + VERTICAL_OFFSET,
+                    rect["y"] + rect["height"],
                 ]
             ).save(fp)
     scenes.append((involved, caption, description, slug))
 
 
-def gen_app(name: str, port: int = None) -> web.Application:
-    def wrap(handler, app):
-        db = sql.db(f"test-{name.lower()}.db")
-        db.define("sessions", **web.session_table_sql)
-        web.add_job_tables(db)
-        tx.host.db = db
-        tx.host.cache = web.cache(db=db)
-        tx.host.kv = kv.db(f"test-{name.lower()}", ":", {"jobs": "list"})
-        yield
-        if tx.response.status == "200 OK" and not str(
-            tx.response.headers["Content-Type"]
-        ).startswith("application"):
-            doc = web.parse("<!doctype html>" + str(tx.response.body))
-            try:
-                body = doc.select("body")[0]
-            except IndexError:
-                pass
-            else:
-                body.append(
-                    """<script>
-                    document.addEventListener('DOMContentLoaded', () => {
-                      const div = document.createElement('div');
-                      div.id = 'PAGE_LOADED';
-                      document.body.appendChild(div);
-                    })
-                    </script>""",
-                )
-                tx.response.headers["Content-Type"] = "text/html"
-                tx.response.body = doc.html
-
-    return web.application(
-        name,
-        host=f"{name.lower()}.example",
-        serve=port,
-        mounts=(
-            indieweb.indieauth.server,
-            indieweb.indieauth.client,
-            indieweb.indieauth.root,
-            indieweb.micropub.server,
-            indieweb.micropub.text_client,
-            indieweb.webmention.receiver,
-            indieweb.content,
-        ),
-        wrappers=(
-            wrap,
-            web.resume_session,
-            indieweb.indieauth.wrap_server,
-            indieweb.indieauth.wrap_client,
-            indieweb.micropub.wrap_server,
-            indieweb.webmention.wrap_receiver,
-        ),
-    )
+def wrap(handler, app):
+    yield
+    if tx.response.status in ("200 OK", "201 Created") and not str(
+        tx.response.headers["Content-Type"]
+    ).startswith("application"):
+        doc = web.parse("<!doctype html>" + str(tx.response.body))
+        try:
+            body = doc.select("body")[0]
+        except IndexError:
+            pass
+        else:
+            body.append(
+                """<script>
+                document.addEventListener('DOMContentLoaded', () => {
+                  const div = document.createElement('div');
+                  div.id = 'PAGE_LOADED';
+                  document.body.appendChild(div);
+                })
+                </script>""",
+            )
+            tx.response.headers["Content-Type"] = "text/html"
+            tx.response.body = doc.html
 
 
 class TestIndieAuthDocs:
@@ -153,8 +124,12 @@ class TestIndieAuthDocs:
     @pytest.fixture(scope="class")
     def alice(self):
         """Serve Alice's site and yield her browser."""
-        alice_app = gen_app("Alice", 9910)
-        browser = webdriver.Firefox(executable_path=GeckoDriverManager().install())
+        alice_app = indieweb.site("AliceTest", "alice.example", 9910)
+        alice_app.wrappers.insert(0, wrap)
+        browser = webdriver.Firefox(
+            executable_path=GeckoDriverManager("v0.29.1").install(),
+            firefox_binary="/home/angelo/Downloads/firefox/firefox-bin",
+        )
         browser.set_window_rect(x=50, y=50, width=800, height=600)
         characters["Alice"]["browser"] = browser
         browser.test_entry = functools.partial(
@@ -165,8 +140,12 @@ class TestIndieAuthDocs:
     @pytest.fixture(scope="class")
     def bob(self):
         """Serve Bob's site and yield his browser."""
-        alice_app = gen_app("Bob", 9911)
-        browser = webdriver.Firefox(executable_path=GeckoDriverManager().install())
+        bob_app = indieweb.site("BobTest", "bob.example", 9911)
+        bob_app.wrappers.insert(0, wrap)
+        browser = webdriver.Firefox(
+            executable_path=GeckoDriverManager("v0.29.1").install(),
+            firefox_binary="/home/angelo/Downloads/firefox/firefox-bin",
+        )
         while True:
             browser.set_window_rect(x=900, y=50, width=800, height=600)
             time.sleep(1)
@@ -210,12 +189,74 @@ class TestIndieAuthDocs:
         bob.get("http://bob.example:9911")
         shot("Check your homepage", "You're live!", "Alice", "Bob")
 
+    def test_install_addon(self, alice, bob):
+        alice.install_addon(
+            "/home/angelo/Working/liana/liana-0.0.1-fx.xpi", temporary=True
+        )
+        bob.install_addon(
+            "/home/angelo/Working/liana/liana-0.0.1-fx.xpi", temporary=True
+        )
+        shot(
+            "Install the Liana Browser Extension",
+            "",
+            "Alice",
+            "Bob",
+        )
+        rect = alice.get_window_rect()
+        top = rect["y"]
+        right = rect["x"] + rect["width"]
+        sh.xdotool(
+            "mousemove",
+            right - 140,
+            top + 160,
+            "click",
+            1,
+        )
+
+    def test_sign_in_to_addon(self, alice, bob):
+        rect = alice.get_window_rect()
+        top = rect["y"]
+        right = rect["x"] + rect["width"]
+        sh.xdotool(
+            "mousemove",
+            right - 60,
+            top + 65,
+            "click",
+            1,
+            "mousemove",
+            right - 100,
+            top + 100,
+            "click",
+            1,
+            "type",
+            "http://alice.example:9910",
+        )
+        time.sleep(3)
+        shot(
+            "",
+            "",
+            "Alice",
+        )
+        sh.xdotool(
+            "mousemove",
+            right - 80,
+            top + 130,
+            "click",
+            1,
+        )
+        time.sleep(3)
+        shot(
+            "",
+            "",
+            "Alice",
+        )
+
     def test_sign_in_to_each_other(self, alice, bob):
         alice.get(
-            "http://bob.example:9911/auth/visitors/sign-in?me=http://alice.example:9910"
+            "http://bob.example:9911/auth/users/sign-in?me=http://alice.example:9910"
         )
         bob.get(
-            "http://alice.example:9910/auth/visitors/sign-in?me=http://bob.example:9911"
+            "http://alice.example:9910/auth/users/sign-in?me=http://bob.example:9911"
         )
         shot(
             "Sign in to each other's site",
@@ -229,6 +270,16 @@ class TestIndieAuthDocs:
         bob.find_element_by_css_selector("button[value=signin]").click()
         shot("Signed in", "Once signed in you will see private posts.", "Alice", "Bob")
 
+    def test_people_db(self, alice, bob):
+        alice.get("http://alice.example:9910/people")
+        bob.get("http://bob.example:9911/people")
+        shot(
+            "See your reciprocal relationship in your person database",
+            """Sign-in based.""",
+            "Alice",
+            "Bob",
+        )
+
     def test_micropub_endpoint(self, alice, bob):
         alice.get("http://alice.example:9910/pub")
         bob.get("http://bob.example:9911/pub")
@@ -238,6 +289,31 @@ class TestIndieAuthDocs:
             "Alice",
             "Bob",
         )
+
+    def test_create_text_post(self, alice, bob):
+        alice.get("http://alice.example:9910/editors/text")
+        content = alice.find_element_by_css_selector("textarea[name=content]")
+        content.send_keys("Hello world!")
+        shot(
+            "Write your first post",
+            """Use the built-in text editor.""",
+            "Alice",
+        )
+        content.submit()
+        time.sleep(1)
+        bob.get(alice.current_url)
+        shot(
+            "",
+            "",
+            "Alice",
+            "Bob",
+        )
+        # bob.find_element_by_css_selector("a[href^='web+action://reply']").click()
+        # shot(
+        #     "",
+        #     "",
+        #     "Bob",
+        # )
 
     def test_webmention_receiver(self, alice, bob):
         alice.get("http://alice.example:9910/mentions")
@@ -258,22 +334,6 @@ class TestIndieAuthDocs:
     #     )
     #     alice.find_element_by_css_selector("button").click()
     #     shot("", "", "Alice")
-
-    def test_create_text_post(self, alice, bob):
-        alice.get("http://alice.example:9910/editors/text")
-        content = alice.find_element_by_css_selector("textarea[name=content]")
-        content.send_keys("Hello world!")
-        shot(
-            "Write your first post",
-            """""",
-            "Alice",
-        )
-        content.submit()
-        shot(
-            "",
-            "",
-            "Alice",
-        )
 
     # def test_create_simple_note(self, alice, bob):
     #     request = {"content": "test content"}

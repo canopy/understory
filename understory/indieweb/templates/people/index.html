@@ -1,0 +1,10 @@
+$def with (clients, users)
+
+<h2>Contacts</h2>
+
+<ul>
+$for client in clients:
+    $for user in users:
+        $if client["client_id"] == user["url"]:
+            <li>$user["name"] $user["url"]</li>
+</ul>

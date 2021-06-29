@@ -2,7 +2,7 @@
 
 import pathlib
 
-from understory import mm, web
+from understory import kv, mm, sql, web
 from understory.web import framework as fw
 from understory.web import tx
 
@@ -28,14 +28,65 @@ content = fw.application(
     post=web.nb60_re + r"{,4}",
     slug=r"[\w_-]+",
 )
+people = fw.application("People", db=False, mount_prefix="people")
 cache = fw.application("Cache", db=False, mount_prefix="admin/cache", resource=r".+")
 templates = mm.templates(__name__)
+
+
+def site(name: str, host: str = None, port: int = None) -> web.Application:
+    def wrap(handler, app):
+        db = sql.db(f"{name.lower()}.db")
+        db.define("sessions", **web.session_table_sql)
+        web.add_job_tables(db)
+        tx.host.db = db
+        tx.host.cache = web.cache(db=db)
+        tx.host.kv = kv.db(f"{name.lower()}", ":", {"jobs": "list"})
+        yield
+        if tx.request.uri.path == "" and tx.response.body:
+            doc = web.parse(tx.response.body)
+            try:
+                head = doc.select("head")[0]
+            except IndexError:
+                tx.response.body = f"<!doctype html><head></head><body>{tx.response.body}</body></html>"
+
+    return web.application(
+        name,
+        host=host,
+        serve=port,
+        mounts=(
+            indieauth.profile,
+            indieauth.server.app,
+            indieauth.client.app,
+            indieauth.root,
+            micropub.server,
+            micropub.text_client,
+            webmention.receiver,
+            people,
+            content,
+        ),
+        wrappers=(
+            wrap,
+            web.resume_session,
+            indieauth.server.wrap,
+            indieauth.client.wrap,
+            micropub.wrap_server,
+            webmention.wrap_receiver,
+        ),
+    )
+
+
+@people.route(r"")
+class People:
+    def get(self):
+        return templates.people.index(
+            indieauth.server.get_clients(), indieauth.client.get_users()
+        )
 
 
 @content.route(r"")
 class Homepage:
     def get(self):
-        return templates.content.homepage(indieauth.get_owner(), [])
+        return templates.content.homepage(indieauth.server.get_owner(), [])
 
 
 @content.route(r"understory.js")
@@ -66,6 +117,10 @@ class Cache:
 
 @cache.route(r"{resource}")
 class Resource:
+    """"""
+
+    resource = None
+
     def get(self):
         resource = fw.tx.db.select(
             "cache",
