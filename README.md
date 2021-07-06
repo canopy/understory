@@ -1,52 +1,45 @@
-# understory
-The tools that power the canopy
+    ██╗   ██╗███╗   ██╗██████╗ ███████╗██████╗ ███████╗████████╗ ██████╗ ██████╗ ██╗   ██╗
+    ██║   ██║████╗  ██║██╔══██╗██╔════╝██╔══██╗██╔════╝╚══██╔══╝██╔═══██╗██╔══██╗╚██╗ ██╔╝
+    ██║   ██║██╔██╗ ██║██║  ██║█████╗  ██████╔╝███████╗   ██║   ██║   ██║██████╔╝ ╚████╔╝ 
+    ██║   ██║██║╚██╗██║██║  ██║██╔══╝  ██╔══██╗╚════██║   ██║   ██║   ██║██╔══██╗  ╚██╔╝  
+    ╚██████╔╝██║ ╚████║██████╔╝███████╗██║  ██║███████║   ██║   ╚██████╔╝██║  ██║   ██║   
+     ╚═════╝ ╚═╝  ╚═══╝╚═════╝ ╚══════╝╚═╝  ╚═╝╚══════╝   ╚═╝    ╚═════╝ ╚═╝  ╚═╝   ╚═╝   
 
-## Install
+The tools that power the canopy..
 
-    pip install understory
+## An IndieWeb-compatible personal website packaged and deployed
 
-and/or
+Install [Python Poetry][0].
 
-    npm install understory.js
+Clone your empty website repository and descend into it.
 
-## Usage
-
-### A simple web application
-
-Install [Python Poetry][0] and configure it.
-
-Create a directory for your project and create a module `hello.py` inside:
-
-    from understory import web
-
-    app = web.application("HelloWorld")
-
-    @app.route(r"")
-    class SayHey:
-        def get(self):
-            return "What's up world?"
-
-From inside your project directory:
+NOTE: If you use a private GitHub repository your changes will be
+deployed through GitHub. If you use a public repository your changes
+will be deployed through PyPI.
 
     poetry init
     poetry add understory
-    poetry run web install hello:app hello_app
-    poetry run web serve hello_app
-    poetry version prerelease
-    poetry build
-    poetry publish
 
-Host using [Ghost][1].
-
-#### Add support for the IndieWeb
-
-IndieAuth client/server, Micropub client/server, Microsub, WebSub, Webmention
+Create a file `site.py`:
 
     from understory import indieweb
 
-    app.mount(indieweb.indieauth.server)
-    app.mount(indieweb.micropub.server)
-    app.mount(indieweb.content)
+    app = indieweb.site("Alice")
+
+Initialize your project, add understory as a dependency, install your site's
+entry point in your `project.toml` and serve your website locally in
+development mode:
+
+    poetry run web install site:app Alice
+    poetry run web serve Alice
+
+Open <a href=http://localhost:9000>localhost:9000</a> in your browser.
+
+*Develop.*
+
+To deploy:
+
+    poetry run pkg publish patch
+    poetry run web deploy
 
 [0]: https://python-poetry.org
-[1]: https://gh.ost.lol
