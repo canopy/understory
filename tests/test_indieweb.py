@@ -10,6 +10,7 @@ from gevent import monkey
 monkey.patch_all()
 
 import functools
+import json
 import pathlib
 import textwrap
 import time
@@ -26,9 +27,11 @@ from understory import indieweb, kv, sql, web  # type: ignore
 from understory.web import tx
 from webdriver_manager.firefox import GeckoDriverManager
 
+from . import generate_docs
+
 characters = {"Alice": {}, "Bob": {}}  # XXX , "Carol": {}, "Dan": {}}
 tests_dir = pathlib.Path(__file__).parent
-docs_dir = tests_dir.parent / "docs"
+docs_dir = tests_dir.parent / "docs/_generated"
 scenes = []
 
 
@@ -44,32 +47,10 @@ def teardown_module(module):
     """Render documentation."""
     for name, details in characters.items():
         details["browser"].quit()
-    toc = ""
-    story = ""
-    for index, (who, caption, description, slug) in enumerate(scenes):
-        if caption:
-            toc += f"<li><a href=#{slug}>{caption}</a></li>"
-        story += f"<section id={slug}>"
-        if caption:
-            story += f"<h3>{caption}</h3>"
-        if description:
-            story += f"<p>{description}</p>"
-        story += f"<div class=storyboard>"
-        for character in sorted(characters.keys()):
-            if character in who:
-                url = (
-                    f"https://media.githubusercontent.com/media/canopy/understory/"
-                    f"main/docs/{index:03}_{character}_{slug}.png"
-                )
-                story += f"<div class=character-name>{character}</div>"
-                story += f"<a href={url}><img src={url}></a>"
-            else:
-                story += "<div class=filler></div>"
-        story += f"</div></section>"
-    now = web.utcnow()
-    with (docs_dir / "index.html").open("w") as output_fp:
-        with (tests_dir / "doc_root.html").open() as template_fp:
-            output_fp.write(str(web.template(template_fp)(now, characters, toc, story)))
+    character_names = list(characters.keys())
+    with (tests_dir / "results.json").open("w") as fp:
+        json.dump({"characters": character_names, "scenes": scenes}, fp)
+    generate_docs.main(character_names, scenes)
 
 
 def shot(caption, description, *involved):
@@ -252,12 +233,8 @@ class TestIndieAuthDocs:
         )
 
     def test_sign_in_to_each_other(self, alice, bob):
-        alice.get(
-            "http://bob.example:9911/auth/users/sign-in?me=http://alice.example:9910"
-        )
-        bob.get(
-            "http://alice.example:9910/auth/users/sign-in?me=http://bob.example:9911"
-        )
+        alice.get("http://bob.example:9911/access/sign-in?me=http://alice.example:9910")
+        bob.get("http://alice.example:9910/access/sign-in?me=http://bob.example:9911")
         shot(
             "Sign in to each other's site",
             """When you use IndieAuth to sign in to a friend's website you're going to
