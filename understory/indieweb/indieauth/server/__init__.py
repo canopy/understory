@@ -137,7 +137,7 @@ def wrap(handler, app):
     yield
     if tx.request.uri.path == "" and tx.response.body:
         doc = web.parse(tx.response.body)
-        base = "/auth"
+        base = f"{tx.origin}/auth"
         try:
             head = doc.select("head")[0]
         except IndexError:
