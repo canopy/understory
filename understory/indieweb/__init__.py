@@ -54,10 +54,11 @@ def site(name: str, host: str = None, port: int = None) -> web.Application:
         host=host,
         serve=port,
         mounts=(
-            indieauth.profile,
+            web.framework.data_app,
+            web.framework.debug_app,
+            indieauth.server.profile,
             indieauth.server.app,
             indieauth.client.app,
-            indieauth.root,
             micropub.server,
             micropub.text_client,
             webmention.receiver,

@@ -4,10 +4,23 @@ import base64
 import hashlib
 
 from understory import web
-from understory.web import tx
+from understory.web import tx, uri
 
-app = web.application("IndieAuthClient", mount_prefix="auth/users", db=False)
+app = web.application("IndieAuthClient", mount_prefix="access", db=False)
 templates = web.templates(__name__)
+
+
+def sign_in(site: uri, user: uri) -> uri:
+    """
+    Return the URI to initiate an IndieAuth sign-in at `site` for `user`.
+
+    `site` should be the actual sign-in endpoint URI (different for each service)
+    `me` should be the identity URI for the user attempting sign in
+
+    """
+    # TODO determine the sign-in endpoint from form on given site
+    site["me"] = user
+    return site
 
 
 def get_users():
@@ -49,20 +62,20 @@ class SignIn:
         # XXX     rels = tx.cache[form.me].mf2json["rels"]
         # XXX except web.ConnectionError:
         # XXX     return f"can't reach {form.me}"
-        # XXX auth_endpoint = web.uri(rels["authorization_endpoint"][0])
-        # XXX token_endpoint = web.uri(rels["token_endpoint"][0])
-        # XXX micropub_endpoint = web.uri(rels["micropub"][0])
+        # XXX auth_endpoint = uri(rels["authorization_endpoint"][0])
+        # XXX token_endpoint = uri(rels["token_endpoint"][0])
+        # XXX micropub_endpoint = uri(rels["micropub"][0])
         auth_endpoint = web.discover_link(form.me, "authorization_endpoint")
         token_endpoint = web.discover_link(form.me, "token_endpoint")
         micropub_endpoint = web.discover_link(form.me, "micropub")
         tx.user.session["auth_endpoint"] = str(auth_endpoint)
         tx.user.session["token_endpoint"] = str(token_endpoint)
         tx.user.session["micropub_endpoint"] = str(micropub_endpoint)
-        client_id = web.uri(f"http://{tx.host.name}:{tx.host.port}")
+        client_id = uri(f"http://{tx.host.name}:{tx.host.port}")
         auth_endpoint["me"] = form.me
         auth_endpoint["client_id"] = tx.user.session["client_id"] = client_id
         auth_endpoint["redirect_uri"] = tx.user.session["redirect_uri"] = (
-            client_id / "auth/users/authorize"
+            client_id / "access/authorize"
         )
         auth_endpoint["response_type"] = "code"
         auth_endpoint["state"] = tx.user.session["state"] = web.nbrandom(16)

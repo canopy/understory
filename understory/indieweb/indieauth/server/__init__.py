@@ -9,8 +9,9 @@ from understory import web
 from understory.web import tx
 
 app = web.application(
-    "IndieAuthServer", mount_prefix="auth/clients", db=False, client_id=r"[\w/.]+"
+    "IndieAuthServer", mount_prefix="auth", db=False, client_id=r"[\w/.]+"
 )
+profile = web.application("IndieAuthProfile", mount_prefix="profile", db=False)
 templates = web.templates(__name__)
 
 
@@ -136,7 +137,7 @@ def wrap(handler, app):
     yield
     if tx.request.uri.path == "" and tx.response.body:
         doc = web.parse(tx.response.body)
-        base = "/auth/clients"
+        base = "/auth"
         try:
             head = doc.select("head")[0]
         except IndexError:
@@ -144,11 +145,13 @@ def wrap(handler, app):
         else:
             head.append(
                 f"<link rel=authorization_endpoint href={base}>",
-                f"<link rel=token_endpoint href={base}/token>",
+                f"<link rel=token_endpoint href={base}/tokens>",
+                f"<link rel=ticket_endpoint href={base}/tickets>",
             )
             tx.response.body = doc.html
         web.header("Link", f'<{base}>; rel="authorization_endpoint"', add=True)
-        web.header("Link", f'<{base}/token>; rel="token_endpoint"', add=True)
+        web.header("Link", f'<{base}/tokens>; rel="token_endpoint"', add=True)
+        web.header("Link", f'<{base}/tickets>; rel="ticket_endpoint"', add=True)
 
 
 @app.route(r"")
@@ -221,9 +224,12 @@ class AuthorizationEndpoint:
         raise web.Found(redirect_uri)
 
 
-@app.route(r"token")
+@app.route(r"tokens")
 class TokenEndpoint:
     """A token endpoint."""
+
+    def get(self):
+        return "token endpoint: show tokens to owner; otherwise form to submit a code"
 
     def post(self):
         """Create or revoke an access token."""
@@ -274,6 +280,16 @@ class TokenEndpoint:
         return bool(len([s for s in scope if s not in ("profile", "email")]))
 
 
+@app.route(r"tickets")
+class TicketEndpoint:
+    """A ticket endpoint."""
+
+    def get(self):
+        return (
+            "ticket endpoint: show tickets to owner; otherwise form to submit a ticket"
+        )
+
+
 @app.route(r"clients")
 class Clients:
     """Authorized clients."""
@@ -299,3 +315,67 @@ class Client:
             order="redirect_uri, initiated DESC",
         )
         return templates.client(auths)
+
+
+# XXX @root.route(r"")
+# XXX class Authentication:
+# XXX     """Authentication root dynamically manages either or both of server and client."""
+# XXX
+# XXX     def get(self):
+# XXX         return templates.root(
+# XXX             server.get_owner(), server.get_clients(), client.get_users()
+# XXX         )
+
+
+@app.route(r"sign-in")
+class SignIn:
+    """Sign in as the owner of the site."""
+
+    def post(self):
+        form = web.form("passphrase", return_to="/")
+        credential = tx.db.select("credentials", order="created DESC")[0]
+        if web.verify_passphrase(
+            credential["salt"],
+            credential["scrypt_hash"],
+            form.passphrase.translate({32: None}),
+        ):
+            tx.user.session["uid"] = tx.host.owner["uid"][0]
+            raise web.SeeOther(form.return_to)
+        raise web.Unauthorized("bad passphrase")
+
+
+@app.route(r"sign-out")
+class SignOut:
+    """Sign out as the owner of the site."""
+
+    def get(self):
+        if not tx.user.is_owner:
+            raise web.Unauthorized("must be owner")
+        return templates.signout()
+
+    def post(self):
+        if not tx.user.is_owner:
+            raise web.Unauthorized("must be owner")
+        tx.user.session = None
+        return_to = web.form(return_to="").return_to
+        raise web.SeeOther(f"/{return_to}")
+
+
+@profile.route(r"")
+class Profile:
+    """"""
+
+    def get(self):
+        return templates.identity(get_owner())
+
+    def post(self):
+        if not tx.user.is_owner:
+            raise web.Unauthorized("must be owner")
+        return self.set_name()
+
+    def set_name(self):
+        name = web.form("name").name
+        card = tx.db.select("identities")[0]["card"]
+        card.update(name=[name])
+        tx.db.update("identities", card=card)
+        return name
