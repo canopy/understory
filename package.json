@@ -8,7 +8,7 @@
     "test": "tests"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "jest",
     "build": "webpack"
   },
   "repository": {
@@ -20,7 +20,9 @@
   "bugs": {
     "url": "https://github.com/canopy/understory/issues"
   },
-  "files": ["understory/indieweb/understory.js"],
+  "files": [
+    "understory/indieweb/understory.js"
+  ],
   "homepage": "https://github.com/canopy/understory#readme",
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "^4.27.0",
@@ -30,8 +32,12 @@
     "eslint-plugin-import": "^2.23.4",
     "eslint-plugin-node": "^11.1.0",
     "eslint-plugin-promise": "^5.1.0",
+    "jest": "^27.0.6",
     "ts-loader": "^9.2.3",
     "webpack": "^5.39.1",
     "webpack-cli": "^4.7.2"
+  },
+  "dependencies": {
+    "js-sha256": "^0.9.0"
   }
 }

@@ -9,8 +9,7 @@ const config = {
   node: false,
   module: {
     rules: [
-      { test: /\.tsx?$/, loader: 'ts-loader' },
-      { test: /\.js$/, loader: 'source-map-loader' }
+      { test: /\.tsx?$/, loader: 'ts-loader' }
     ]
   }
 }

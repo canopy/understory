@@ -59,15 +59,15 @@ var understory;
 //         }
 //     });
 // }
-var MicropubClient = /** @class */ (function () {
-    function MicropubClient(endpoint, token) {
+class MicropubClient {
+    constructor(endpoint, token) {
         this.endpoint = endpoint;
         this.token = token;
         this.headers = {
             accept: 'application/json'
         };
         if (typeof token !== 'undefined') {
-            this.headers.authorization = "Bearer " + token;
+            this.headers.authorization = `Bearer ${token}`;
         }
         this.getConfig = this.getConfig.bind(this);
         this.create = this.create.bind(this);
@@ -77,19 +77,19 @@ var MicropubClient = /** @class */ (function () {
         this.query = this.query.bind(this);
         this.upload = this.upload.bind(this);
     }
-    MicropubClient.prototype.getConfig = function () {
+    getConfig() {
         return fetch(this.endpoint + '?q=config', {
             headers: this.headers
-        }).then(function (response) {
+        }).then(response => {
             if (response.status === 200 || response.status === 201) {
-                return response.json().then(function (data) {
+                return response.json().then(data => {
                     return data;
                 });
             }
         });
-    };
-    MicropubClient.prototype.create = function (type, payload, visibility) {
-        var headers = this.headers;
+    }
+    create(type, payload, visibility) {
+        const headers = this.headers;
         headers['content-type'] = 'application/json';
         if (typeof visibility === 'undefined') {
             visibility = 'private';
@@ -98,77 +98,75 @@ var MicropubClient = /** @class */ (function () {
             method: 'POST',
             headers: headers,
             body: JSON.stringify({
-                type: ["h-" + type],
+                type: [`h-${type}`],
                 properties: payload,
                 visibility: visibility
             })
-        }).then(function (response) {
+        }).then(response => {
             if (response.status === 200 || response.status === 201) {
-                var permalink = response.headers.get('location');
+                const permalink = response.headers.get('location');
                 // if (permalink.startsWith('/')) {
                 //   permalink = `https://${me}${permalink}`
                 // }
                 return permalink;
             }
         });
-    };
-    MicropubClient.prototype.read = function (url) {
-        var headers = this.headers;
+    }
+    read(url) {
+        const headers = this.headers;
         headers['content-type'] = 'application/json';
         return fetch(this.endpoint, {
             method: 'GET',
             headers: headers
-        }).then(function (response) {
+        }).then(response => {
             if (response.status === 200 || response.status === 201) {
-                return response.json().then(function (data) {
+                return response.json().then(data => {
                     return data;
                 });
             }
         });
-    };
-    MicropubClient.prototype.update = function (url, payload) {
+    }
+    update(url, payload) {
         payload.action = 'update';
         payload.url = url;
         return fetch(this.endpoint, {
             method: 'POST',
             headers: {
                 accept: 'application/json',
-                authorization: "Bearer " + this.token,
+                authorization: `Bearer ${this.token}`,
                 'content-type': 'application/json'
             },
             body: JSON.stringify(payload)
-        }).then(function (response) {
+        }).then(response => {
             if (response.status === 200 || response.status === 201) {
                 console.log('UPDATED!');
             }
         });
-    };
-    MicropubClient.prototype.delete = function (url) {
-    };
-    MicropubClient.prototype.query = function (q, args) {
-        return fetch(this.endpoint + ("?q=" + q + "&search=" + args), {
+    }
+    delete(url) {
+    }
+    query(q, args) {
+        return fetch(this.endpoint + `?q=${q}&search=${args}`, {
             headers: this.headers
-        }).then(function (response) {
+        }).then(response => {
             if (response.status === 200 || response.status === 201) {
-                return response.json().then(function (data) {
+                return response.json().then(data => {
                     return data;
                 });
             }
         });
-    };
-    MicropubClient.prototype.upload = function () {
-    };
-    return MicropubClient;
-}());
-var MicrosubClient = /** @class */ (function () {
-    function MicrosubClient(endpoint, token) {
+    }
+    upload() {
+    }
+}
+class MicrosubClient {
+    constructor(endpoint, token) {
         this.endpoint = endpoint;
         this.token = token;
         // this.followers = this.followers.bind(this)
         // this.follow = this.follow.bind(this)
     }
-    return MicrosubClient;
-}());
+}
 module.exports = {
     MicropubClient: MicropubClient,
     MicrosubClient: MicrosubClient

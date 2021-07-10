@@ -415,7 +415,7 @@ class MicrosubClient {
 //       }
 //     })
 //   }
-// 
+//
 //   follow (url, ...channel) {
 //     let body = `action=follow&url=${url}`
 //     if (channel.length) {
@@ -433,7 +433,7 @@ class MicrosubClient {
 //       }
 //     })
 //   }
-// 
+//
 //   search (query, ...channel) {
 //     let body = `action=search&query=${query}`
 //     if (channel.length) {

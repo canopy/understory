@@ -1,8 +1,8 @@
 {
-    "compilerOptions": {
-        "outDir": "./dist",
-        "allowJs": true,
-        "target": "es5"
-    },
-    "files": ["index.ts"]
+  "compilerOptions": {
+    "outDir": "./dist",
+    "allowJs": true,
+    "target": "es6"
+  },
+  "files": ["index.ts"]
 }
