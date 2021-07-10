@@ -31,7 +31,7 @@ from . import generate_docs
 
 characters = {"Alice": {}, "Bob": {}}  # XXX , "Carol": {}, "Dan": {}}
 tests_dir = pathlib.Path(__file__).parent
-docs_dir = tests_dir.parent / "docs/_generated"
+docs_dir = tests_dir.parent / "docs"
 scenes = []
 
 
