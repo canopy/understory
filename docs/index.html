@@ -1,7 +1,7 @@
 <!doctype html>
 <html>
 <head>
-<title>Canopy / Understory</title>
+<title>Understory Stream</title>
 <link rel="preconnect" href="https://fonts.gstatic.com">
 <link href="https://fonts.googleapis.com/css2?family=Faustina&display=swap" rel="stylesheet">
 <style>
@@ -9,15 +9,13 @@ body {
     background-color: #002b36;
     color: #839496;
     font-family: 'Faustina', sans-serif;
-    font-size: 18px;
+    font-size: 16px;
     margin: 4em auto;
     max-width: 50em; }
-h1 {
-    color: #586e75; }
 img {
     width: 100%; }
 a {
-    color: #268bd2;
+    color: #c1d1e7;
     text-decoration: none; }
 a:link {
     color: #268bd2; }
@@ -30,27 +28,37 @@ a:active {
 .storyboard img { border: 0; .1em solid #586e75; }
 /* section {{ margin: 6em 0; }} */
 .character-name { font-weight: bold; }
+pre {
+    background-color: #073642;
+    font-size: .75em;
+    margin-left: 4em;
+    padding: 1em;
+    width: 50em; }
 </style>
 </head>
 <body class=h-entry>
+<header>
 <h1><a class="p-name u-url" href=/>Understory Stream</a></h1>
 <p><small>Last updated <time class=dt-updated
-datetime="2021-06-29T22:30:26.960454Z">Jun 29, 2021</time> by <a
+datetime="2021-07-10T18:56:27.884128Z">Jul 10, 2021</time> by <a
 class="p-author h-card" href=https://angelogladding.com>Angelo Gladding</a></small></p>
 <p class=p-summary>The <a href=https://github.com/canopy/understory>understory</a>
 implements IndieWeb technologies. The <a href=https://github.com/canopy/canopy>canopy</a>
 uses the understory to provide an easy to use first-class IndieWeb "client".</p>
+</header>
+<aside>
+<a href=#map>Map</a><br>
+<a href=#nursery>Nursery</a>
+</aside>
+<!--nav>
 <ul>
-    <li><a href=#map>Read the Map</a></li>
-    <li><a href=#stroll>Take a Stroll</a></li>
-    <li><a href=#plant>Plant your Tree</a></li>
+    <li><a href=#identity>identity</a></li>
+    <li><a href=#content>content</a></li>
+    <li><a href=#collaboration>collaboration</a></li>
 </ul>
+</nav-->
 <div class=e-content>
 <article>
-    <h2 id=map>Read the Map</h2>
-    <p>The API..</p>
-    <p>Test results..</p>
-    <h2 id=stroll>Take a Stroll</h2>
     <p>This is Alice and Bob using separately mounted IndieWeb applications
     to communicate.</p>
     <nav>
@@ -65,8 +73,47 @@ uses the understory to provide an easy to use first-class IndieWeb "client".</p>
     </section>
 </article>
 <article>
-    <h2 id=plant>Plant your Tree</h2>
-    <p>Simple example..</p>
+    <h2 id=map>Map</h2>
+    <ul>
+    <li><span style="display: inline-block; width: 4em;">indieweb</span> Mountable IndieWeb apps and helper functions.</li>
+    <li><span style="display: inline-block; width: 4em;">kv</span> An opinionated Redis interface.</li>
+    <li><span style="display: inline-block; width: 4em;">mf</span> A Microformats parser and utilities.</li>
+    <li><span style="display: inline-block; width: 4em;">mkdn</span> Render formatted plaintext (Markdown) as HTML.</li>
+    <li><span style="display: inline-block; width: 4em;">mm</span> Render Python powered string templates.</li>
+    <li><span style="display: inline-block; width: 4em;">pkg</span> Tools for metamodern software packaging.</li>
+    <li><span style="display: inline-block; width: 4em;">solarized</span> A color palette that adapts to the time of day.</li>
+    <li><span style="display: inline-block; width: 4em;">sql</span> An opinionated Pythonic SQLite interface.</li>
+    <li><span style="display: inline-block; width: 4em;">src</span> Tools for metamodern software development.</li>
+    <li><span style="display: inline-block; width: 4em;">term</span> Tools for a metamodern terminal environment.</li>
+    <li><span style="display: inline-block; width: 4em;">uri</span> An intelligent Pythonic URI interface.</li>
+    <li><span style="display: inline-block; width: 4em;">web</span> Tools for a metamodern web environment.</li>
+    </ul>
+</article>
+<article>
+    <h2 id=nursery>Nursery</h2>
+    <p>Clone your empty website repository and descend into it. *If you use a <strong>private</strong> GitHub repository your changes will be deployed through GitHub. If you use a <strong>public</strong> repository your changes will be deployed through PyPI.* </p>
+<p>Initialize your project and add understory as a dependency. </p>
+<pre>poetry init
+poetry add understory</pre>
+<p>Create a file <code>site.py</code>: </p>
+<pre>from understory import indieweb
+
+app = indieweb.site()</pre>
+<p>Add your site's app as an entry point in your <code>pyproject.toml</code>: </p>
+<pre>poetry run web install site:app AliceAnderson</pre>
+<p>Serve your website locally in development mode: </p>
+<pre>poetry run web serve AliceAnderson</pre>
+<p>Open <a href="http://localhost:9000">localhost:9000</a> in your browser. </p>
+<p><em>Develop.</em> For example, add a custom route: </p>
+<pre>import random
+
+@app.route(r"hello")
+class SayHello:
+    return random.choice(["How you doin'?", "What's happening?", "What's up?"])</pre>
+<p>To publish: </p>
+<pre>poetry run pkg publish patch</pre>
+<p>To deploy: </p>
+<pre>poetry run web deploy</pre>
 </article>
 </div>
 <script>

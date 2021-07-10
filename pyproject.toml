@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "understory"
-version = "0.0.38-alpha.0"
+version = "0.0.38"
 description = "The tools that power the canopy"
 authors = ["Angelo Gladding <angelo@lahacker.net>"]
 license = "AGPL-3.0-or-later"
