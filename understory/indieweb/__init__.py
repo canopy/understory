@@ -35,19 +35,23 @@ templates = mm.templates(__name__)
 
 def site(name: str, host: str = None, port: int = None) -> web.Application:
     def wrap(handler, app):
-        db = sql.db(f"{name.lower()}.db")
+        host = tx.request.uri.host  # TODO FIXME check for filename safety!!
+        db = sql.db(f"{host}.db")
         db.define("sessions", **web.session_table_sql)
         web.add_job_tables(db)
         tx.host.db = db
         tx.host.cache = web.cache(db=db)
-        tx.host.kv = kv.db(f"{name.lower()}", ":", {"jobs": "list"})
+        tx.host.kv = kv.db(host, ":", {"jobs": "list"})
         yield
         if tx.request.uri.path == "" and tx.response.body:
             doc = web.parse(tx.response.body)
             try:
                 head = doc.select("head")[0]
             except IndexError:
-                tx.response.body = f"<!doctype html><head></head><body>{tx.response.body}</body></html>"
+                tx.response.body = (
+                    f"<!doctype html><head></head>"
+                    f"<body>{tx.response.body}</body></html>"
+                )
 
     return web.application(
         name,
