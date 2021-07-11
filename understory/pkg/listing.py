@@ -7,10 +7,11 @@ import collections
 import json
 import os
 import pathlib
-import pkg_resources
 import re
 
-from .discover import gitsh, PackageRepoError
+import pkg_resources
+
+from .discover import PackageRepoError, gitsh
 
 __all__ = ["get_graph", "get_distributions", "get_distribution"]
 
@@ -51,9 +52,9 @@ def get_distribution(name):
     """
     return a dictionary containing details of given installed distribution
 
-        >>> dist = get_distribution("understory-code")
+        >>> dist = get_distribution("understory")
         >>> dist["name"]
-        'understory-code'
+        'understory'
 
     # >>> dist["home-page"]
     # 'https://angelo.lahacker.net/software/source/projects/belle'
