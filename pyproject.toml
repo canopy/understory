@@ -33,7 +33,7 @@ websub = "understory.indieweb.websub:hub"
 
 [tool.poetry.dependencies]
 python = "^3.7"
-understory-web = "^0.0.21"
+understory-web = "^0.0.22"
 # understory-web = {path = "../understory-web"}
 
 [tool.poetry.dev-dependencies]
