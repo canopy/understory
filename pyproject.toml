@@ -8,6 +8,8 @@ readme = "README.md"
 
 [tool.poetry.urls]
 Homepage = "https://understory.stream"
+Documentation = "https://understory.stream/map"
+Issues = "https://github.com/canopy/understory/issues"
 
 [tool.poetry.scripts]
 loveliness = "understory.loveliness:main"
