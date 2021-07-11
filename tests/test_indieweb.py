@@ -37,8 +37,8 @@ scenes = []
 
 def setup_module(module):
     """Clean up previous run."""
-    pathlib.Path("alicetest.db").unlink(missing_ok=True)
-    pathlib.Path("bobtest.db").unlink(missing_ok=True)
+    pathlib.Path("alice.example.db").unlink(missing_ok=True)
+    pathlib.Path("bob.example.db").unlink(missing_ok=True)
     for png in docs_dir.glob("*.png"):
         png.unlink()
 
