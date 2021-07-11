@@ -1,0 +1,25 @@
+$def with (app)
+$var title: Debug
+
+<ul>
+$for wrapper in app.wrappers:
+    <li>$wrapper</li>
+</ul>
+<ul>
+$for prefix, subapp in app.mounts:
+    $if subapp.wrappers:
+        $for wrapper in subapp.wrappers:
+            <li>$wrapper</li>
+</ul>
+
+<ul>
+$for route, _ in app.routes:
+    <li>$route</li>
+</ul>
+<ul>
+$for prefix, subapp in app.mounts:
+    $ prefix = f"/{prefix}/".rstrip("/")
+    $if subapp.routes:
+        $for route, _ in subapp.routes:
+            <li>$(f"{prefix}/{route}".rstrip("/"))</li>
+</ul>

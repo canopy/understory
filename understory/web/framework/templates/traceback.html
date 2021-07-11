@@ -1,0 +1,112 @@
+$def with (exception, message, traceback)
+$def head():
+    <style>
+    /*.frame > div > *, div[class|=envblock] {
+        float: left;
+        width: 45em; }*/
+    /*
+    .frame > div {
+        clear: left;
+        display: table; }
+    .frame table {
+        float: left; }
+    */
+    .frame table td.code {
+        padding: 0; }
+    article dl {
+        // background-color: #073642;
+        display: table;
+        font-size: .8em;
+        margin: 0;
+        overflow: auto;
+        overflow-y: hidden;
+        width: 37em; }
+    article dl dt {
+        clear: left;
+        display: block;
+        float: left;
+        font-weight: bold;
+        width: 14em; }
+    article dl dd {
+        display: block;
+        float: left;
+        margin: 0; }
+    article dl dd pre {
+        font-size: 1em;
+        line-height: 1.6;
+        margin: 0; }
+    /*.envblock-user > *, .envblock-request > * {
+        clear: left;
+        margin-right: 1.5em; }
+    .envblock-host > *, .envblock-response > * {
+        margin-left: 1.5em; }*/
+    
+    .focus {
+        display: table;
+        width: 100%; }
+    .solar-dark .focus {
+        background-color: #073642; }
+    .solar-light .focus {
+        background-color: #eee8d5; }
+    </style>
+$var head = head
+$var title: Internal Error
+$var subtitle: $exception.__name__: $message
+
+$# $ query = {"q": "python " + exception.__name__ + ": " + str(message) + " !"}
+$# <p>Try a <a href="https://duckduckgo.com/?$urlencode(query)">web search</a>
+$# for resources related to the exception raised.</p>
+
+$def render_dictionary(type, obj):
+    <dl class="$(type)-objects">
+    $for key, value in sorted(obj.items()):
+        <dt>$key</dt>
+        <dd><pre>$pformat(value, width=80)</pre></dd>
+    </dl>
+
+$ frames = list(reversed(inspect.getinnerframes(traceback)))[:-1]
+
+<div>
+
+<h1>$exception.__name__: $message</h1>
+
+<div id=traceback>
+<h2>Traceback</h2>
+<ol>
+$for n, (frame, filename, lineno, function, context, index) in enumerate(frames, 1):
+    <li>$context[index]<br><small><a href=#frame-$n>$filename</a></small></li>
+</ol>
+$for n, (frame, filename, lineno, function, context, index) in enumerate(frames, 1):
+    <div class=frame id=frame-$n>
+    <p><big><strong>$filename</strong></big></p>
+    $ code, starting_line = getsourcelines(frame.f_code)
+    $:highlight("".join(code), ".py", starting_line, lineno)
+    $:render_dictionary("traceback", frame.f_locals)
+    </div>
+</div>
+
+<div id=environment>
+<h2>Environment</h2>
+<div class=envblock-user>
+    <h3>User</h3>
+    $:render_dictionary("environment-user", tx.user.__dict__)
+</div>
+<div class=envblock-host>
+    <h3>Host</h3>
+    $:render_dictionary("environment-host", tx.host.__dict__)
+</div>
+<div class=envblock-request>
+    <h3>Request</h3>
+    <p>$tx.request.method /$str(tx.request.uri.path)</p>
+    $:render_dictionary("environment-request", tx.request.headers.__dict__)
+    <pre>$str(tx.request.body.items())</pre>
+</div>
+<div class=envblock-response>
+    <h3>Response</h3>
+    <p>$str(tx.response.status)</p>
+    $:render_dictionary("environment-response", tx.response.headers.__dict__)
+    <pre>$str(tx.response.body)</pre>
+</div>
+</div>
+
+</div>
