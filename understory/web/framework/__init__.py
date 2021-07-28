@@ -154,7 +154,7 @@ def application(
     wrappers=None,
     sessions=False,  # XXX in favor of explicitly wrapper
     host=None,
-    serve=False,
+    port=False,
     **path_args,
 ) -> Application:
     if name in applications:
@@ -171,7 +171,7 @@ def application(
             static=static,
             icon=icon,
             sessions=sessions,
-            serve=serve,
+            port=port,
             mounts=mounts,
             wrappers=wrappers,
             **path_args,
@@ -649,7 +649,7 @@ class Application:
         mounts=None,
         wrappers=None,
         host=None,
-        serve=False,
+        port=False,
         **path_args,
     ):
         self.name = name
@@ -657,6 +657,7 @@ class Application:
         self.pre_wrappers = []
         self.post_wrappers = []
         self.host = host
+        self.port = port
         self.path_args = {}
         self.add_path_args(**path_args)
         if wrappers:
@@ -687,40 +688,8 @@ class Application:
         # XXX         self.view = mm.templates(name + ".__web__", tx=tx)
         # XXX     except ImportError:
         # XXX         pass
-        if icon:
-
-            def insert_icon_rels(handler, app):
-                yield
-                if (
-                    tx.response.status == "200 OK"
-                    and tx.response.headers.content_type == "text/html"
-                ):
-                    doc = parse(tx.response.body)
-                    head = doc.select("head")[0]
-                    head.append("<link rel=icon href=/icon.png>")
-                    tx.response.body = doc.html
-
-            self.wrap(insert_icon_rels, "post")
-
-            if str(icon).endswith("="):  # TODO better test for b64
-                payload = b64decode(icon)
-            else:
-                icon_path = pkg_resources.resource_filename(icon, "icon.png")
-                payload = pathlib.Path(icon_path)
-
-            class Icon:
-                def get(innerself):
-                    header("Content-Type", "image/png")
-                    try:
-                        with payload.open("rb") as fp:
-                            return fp.read()
-                    except AttributeError:
-                        return payload
-
-            self.route(r"icon.png")(Icon)
-            self.route(r"favicon.ico")(Icon)
-        if serve:
-            self.serve(serve)
+        if port:
+            self.serve(port)
 
     def serve(self, port, host="127.0.0.1"):
         # must be called from custom jupyter kernel/head of your program:
@@ -1131,6 +1100,7 @@ def sessions(**defaults):  # TODO XXX
 
 data_app = application("Data", db=False, mount_prefix="data", table=r"\w+")
 debug_app = application("Debug", db=False, mount_prefix="debug")
+icons_app = application("Icon", db=False, mount_prefix="icons")
 
 
 @data_app.route(r"sql")
@@ -1157,6 +1127,37 @@ class Debug:
 
     def get(self):
         return config_templates.debug(tx.app)
+
+
+@icons_app.wrap
+def insert_icon_rels(handler, app):
+    # TODO handle `favicon.ico` requests here
+    yield
+    if (
+        tx.response.status == "200 OK"
+        and tx.response.headers.content_type == "text/html"
+    ):
+        doc = parse(tx.response.body)
+        head = doc.select("head")[0]
+        head.append("<link rel=icon href=/icon.png>")
+        tx.response.body = doc.html
+
+
+@icons_app.route(r"icon.png")
+class Icon:
+    """Your site's icon"""
+
+    def get(self):
+        # TODO set `icon_path` when you add the `insert_icon_rels` wrapper
+        icon_path = None  # XXX pkg_resources.resource_filename(icon, "icon.png")
+        payload = pathlib.Path(icon_path)
+
+        header("Content-Type", "image/png")
+        try:
+            with payload.open("rb") as fp:
+                return fp.read()
+        except AttributeError:
+            return payload
 
 
 session_table_sql = dict(

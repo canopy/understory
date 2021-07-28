@@ -1,6 +1,15 @@
 $def with (app)
 $var title: Debug
 
+<p>Prefix: $app.prefix<br>
+Host: $app.host<br>
+Port: $app.port<br>
+Name: $app.name<br>
+SQLite DB: $app.db.path</p>
+
+$tx.app
+
+<h2>Wrappers</h2>
 <ul>
 $for wrapper in app.wrappers:
     <li>$wrapper</li>
@@ -12,14 +21,23 @@ $for prefix, subapp in app.mounts:
             <li>$wrapper</li>
 </ul>
 
+<h2>Routes</h2>
 <ul>
 $for route, _ in app.routes:
     <li>$route</li>
 </ul>
-<ul>
+
+<h2>Mounts</h2>
+<ul id=mounts>
 $for prefix, subapp in app.mounts:
     $ prefix = f"/{prefix}/".rstrip("/")
     $if subapp.routes:
         $for route, _ in subapp.routes:
-            <li>$(f"{prefix}/{route}".rstrip("/"))</li>
+            <li>$(f"{prefix}/{route}".rstrip("/"))
+            <small><a href=https://understory.stream/api/$("/".join(_.handler.__module__.split(".")))#$_.handler.__name__>$_.handler.__name__</a></small></li>
 </ul>
+
+<style>
+ul#mounts {
+  list-style: none; }
+</style>

@@ -56,7 +56,7 @@ def site(name: str, host: str = None, port: int = None) -> web.Application:
     return web.application(
         name,
         host=host,
-        serve=port,
+        port=port,
         mounts=(
             web.framework.data_app,
             web.framework.debug_app,

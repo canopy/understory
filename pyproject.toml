@@ -35,7 +35,7 @@ webmention = "understory.indieweb.webmention:receiver"
 websub = "understory.indieweb.websub:hub"
 
 [tool.poetry.dependencies]
-python = "^3.9"
+python = "^3.9,<3.10"
 argcomplete = "^1.12.3"
 radon = "^5.0.1"
 pendulum = "^2.1.2"
@@ -69,6 +69,7 @@ cssselect = "^1.1.0"
 dnspython = "^2.1.0"
 feedparser = "^6.0.8"
 regex = "^2021.7.6"
+libgaea = "^0.0.3"
 
 [tool.poetry.dev-dependencies]
 ipython = "^7.25.0"

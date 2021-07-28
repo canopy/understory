@@ -19,6 +19,7 @@ import os
 import pathlib
 
 import pendulum
+
 try:
     from pysqlite3 import dbapi2 as sqlite3
 except ImportError:
@@ -31,6 +32,7 @@ __all__ = ["db"]
 
 
 # TODO register and handle JSON type
+
 
 def from_datetime(val):
     if isinstance(val, datetime.datetime):
@@ -86,14 +88,15 @@ def from_json(val):
             if tz:
                 dt = dt.astimezone(pendulum.timezone(tz))
             dct[key] = [dt]
+
         upgrade_date("published")
         upgrade_date("updated")
         return dct
+
     return json.loads(val, object_hook=f)
 
 
 class JSONEncoder(json.JSONEncoder):
-
     def default(self, obj):
         if isinstance(obj, (datetime.date, datetime.datetime)):
             return obj.isoformat()
@@ -118,8 +121,10 @@ def get_icu():
     icuext_path = current_dir / "libsqliteicu.so"
     if not icuext_path.exists():
         icuext_source_path = current_dir / "icu.c"
-        os.system(f"gcc -fPIC -shared {icuext_source_path} "
-                  f"`pkg-config --libs icu-i18n` -o {icuext_path}")
+        os.system(
+            f"gcc -fPIC -shared {icuext_source_path} "
+            f"`pkg-config --libs icu-i18n` -o {icuext_path}"
+        )
     return icuext_path
 
 
@@ -132,14 +137,26 @@ class Database:
 
     def __init__(self, path):
         self.path = path
-        for command in ("create", "alter", "drop", "insert", "replace",
-                        "select", "update", "delete", "columns"):
+        for command in (
+            "create",
+            "alter",
+            "drop",
+            "insert",
+            "replace",
+            "select",
+            "update",
+            "delete",
+            "columns",
+        ):
+
             def single_statement_cursor(command):
                 @functools.wraps(getattr(Cursor, command))
                 def proxy(_self, *args, **kwargs):
                     with self.transaction as cur:
                         return getattr(cur, command)(_self, *args, **kwargs)
+
                 return proxy
+
             setattr(self, command, single_statement_cursor(command))
 
         conn = sqlite3.connect(path, detect_types=sqlite3.PARSE_DECLTYPES)
@@ -158,6 +175,9 @@ class Database:
 
         self.debug = False
 
+    def __repr__(self):
+        return f"sql.db: {self.path}"
+
     def define(self, table, **schema):
         """
         define multiple tables at once migrating them if necessary
@@ -166,10 +186,14 @@ class Database:
         # TODO bump version a la "PRAGMA user_version = 1;" and store change
         # TODO store backups
         try:
-            self.create(table, ", ".join(f"{row} {definition}" for row, definition
-                                         in list(schema.items())))
+            self.create(
+                table,
+                ", ".join(
+                    f"{row} {definition}" for row, definition in list(schema.items())
+                ),
+            )
         except self.OperationalError:
-            pass 
+            pass
         # while table_schemas:
         #     for table, schema in list(table_schemas.items()):
         #         print(table)
@@ -198,8 +222,10 @@ class Database:
 
     @property
     def tables(self):
-        return [r[0] for r in self.select("sqlite_master", what="name",
-                                          where="type='table'")]
+        return [
+            r[0]
+            for r in self.select("sqlite_master", what="name", where="type='table'")
+        ]
 
     @property
     @contextlib.contextmanager
@@ -256,9 +282,7 @@ def db(path=None, **table_schemas) -> Database:
 
 class Cursor:
 
-    """
-
-    """
+    """ """
 
     IntegrityError = sqlite3.IntegrityError
     OperationalError = sqlite3.OperationalError
@@ -313,9 +337,9 @@ class Cursor:
                     record[column] = JSONEncoder().encode(val)
             columns, vals = zip(*record.items())
             values.append(vals)
-        sql = ("{} INTO {}({})".format(operation.upper(), table,
-                                       ", ".join(columns)) +
-               " VALUES ({})".format(", ".join("?" * len(vals))))
+        sql = "{} INTO {}({})".format(
+            operation.upper(), table, ", ".join(columns)
+        ) + " VALUES ({})".format(", ".join("?" * len(vals)))
         if self.debug:
             print(sql)
         try:
@@ -329,15 +353,33 @@ class Cursor:
             if not _force:
                 raise err
 
-    def select(self, table, what="*", where=None, order=None, group=None,
-               join=None, limit=None, offset=None, vals=None):
+    def select(
+        self,
+        table,
+        what="*",
+        where=None,
+        order=None,
+        group=None,
+        join=None,
+        limit=None,
+        offset=None,
+        vals=None,
+    ):
         """
         select records from one or more tables
 
         """
-        sql = self._select_sql(table, what=what, where=where, order=order,
-                               group=group, join=join, limit=limit,
-                               offset=offset, vals=vals)[1:-1]
+        sql = self._select_sql(
+            table,
+            what=what,
+            where=where,
+            order=order,
+            group=group,
+            join=join,
+            limit=limit,
+            offset=offset,
+            vals=vals,
+        )[1:-1]
         if self.debug:
             print(sql)
             if vals:
@@ -348,7 +390,6 @@ class Cursor:
             self.cur.execute(sql)
 
         class Results:
-
             def __init__(innerself, results):
                 innerself.results = list(results)
 
@@ -363,8 +404,7 @@ class Cursor:
                 types = {}
                 for column in self.columns(table):
                     types[column[0]] = column[1]
-                    results += (f"<td>{column[0]} "
-                                f"<small>{column[1]}</small></td>")
+                    results += f"<td>{column[0]} " f"<small>{column[1]}</small></td>"
                 results += "</tr>"
                 for result in innerself.results:
                     results += "<tr>"
@@ -375,10 +415,22 @@ class Cursor:
                         results += f"<td>{value}</td>"
                     results += "</tr>"
                 return f"<table>{results}</table>"
+
         return Results(self.cur.fetchall())
 
-    def _select_sql(self, table, what="*", where=None, order=None, group=None,
-                    join=None, limit=None, offset=None, vals=None, suffix=""):
+    def _select_sql(
+        self,
+        table,
+        what="*",
+        where=None,
+        order=None,
+        group=None,
+        join=None,
+        limit=None,
+        offset=None,
+        vals=None,
+        suffix="",
+    ):
         sql_parts = ["SELECT {}".format(what), "FROM {}".format(table)]
         if join:
             if not isinstance(join, (list, tuple)):
@@ -448,5 +500,7 @@ class Cursor:
         return columns for given table
 
         """
-        return [list(column)[1:] for column in
-                self.cur.execute("PRAGMA table_info({})".format(table))]
+        return [
+            list(column)[1:]
+            for column in self.cur.execute("PRAGMA table_info({})".format(table))
+        ]
