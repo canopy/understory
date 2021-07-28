@@ -1,15 +1,75 @@
+ns +10,15
 <title>Text Editor</title>
+
 <form action=/editors/text method=post>
-$# <div><label>Name<br><input type=text name=name></label></div>
-<div><label>Content<br><textarea name=content></textarea></label></div>
-$# <div><label>Categories<br><input type=text name=category></label></div>
-$# <div><label>Channels<br><input type=text name=channel></label></div>
-<button>Create</button>
+
+  <div>
+    <label for=name>Title your post</label><br>
+    <!-- deliberately not required -->
+    <input type=text id=name name=name>
+  </div>
+
+  <div>
+    <label for=published>Publication date</label><br>
+    <!-- deliberately not required -->
+    <input type=date id=published name=published>
+  </div>
+
+  <fieldset>
+    <legend>Channels</legend>
+    <!-- XXX todo populate fieldset with JS call to mp?q=config, returning the below divs filled out with server's channels -->
+    <div>
+      <input type=checkbox id=dnd name=channel value=dnd>
+      <label for=dnd>DnD</label>
+    </div>
+    <div>
+      <input type=checkbox id=hottakes name=channel value=hottakes>
+      <label for=hottakes>Hot Takes</label>
+    </div>
+  </fieldset>
+
+  <div>
+    <label for=content>Type your post</label><br>
+    <textarea id=content name=content></textarea>
+  </div>
+
+  <fieldset>
+  <legend for=visibility>Visibility</legend>
+  <div>
+<!-- "it is recommended to either include the required attribute in every same-named radio button in the group, or else in none." https://developer.mozilla.org/en-US/docs/Web/HTML/Attributes/required -->
+    <input type=radio id=private name=visibility value=private
+    required checked>
+    <label for=private>Private</label>
+  </div>
+
+  <div>
+    <input type=radio id=public name=visibility value=public
+    required>
+    <label for=public>Public</label>
+  </div>
+  </fieldset>
+
+  <fieldset>
+    <legend>Categories</legend>
+    <!-- XXX todo populate with call to mp?q=config as with channels -->
+    <div>
+      <input type=checkbox id=coding name=category value=coding>
+      <label for=coding>Coding</label>
+    </div>
+    <div>
+      <input type=checkbox id=music name=category value=music>
+      <label for=music>Music</label>
+    </div>
+  </fieldset>
+
+
+  <button>Create</button>
+
 </form>
 
 <script src=/understory.js crossorigin=anonymous></script>
 <script>
-const { MicropubClient } = understory
+  const { MicropubClient } = understory
 const pub = new MicropubClient("/pub")
 document.querySelector("form").addEventListener("submit", (event) => {
   event.preventDefault()
