@@ -71,6 +71,18 @@ def wrap_server(handler, app):
         web.header("Link", '</pub>; rel="micropub"', add=True)
 
 
+def get_config():
+    syndication_endpoints = []
+    # TODO "channels": generate_channels()}
+    return {
+        "q": ["category", "contact", "source", "syndicate-to"],
+        "media-endpoint": f"https://{tx.host.name}/pub/media",
+        "syndicate-to": syndication_endpoints,
+        "visibility": ["public", "unlisted", "private"],
+        "timezone": "America/Los_Angeles",
+    }
+
+
 def route_unrouted(handler, app):
     """Handle channels."""
     for channel in tx.pub.get_channels():
@@ -167,33 +179,33 @@ class LocalClient:
             flat_values = []
             for v in resource[k]:
                 if isinstance(v, dict):
-                    v = dict(**v["properties"], type=[v["type"][0].removeprefix("h-")])
+                    if not ("html" in v or "datetime" in v):
+                        v = dict(
+                            **v["properties"], type=[v["type"][0].removeprefix("h-")]
+                        )
                 flat_values.append(v)
             resource[k] = flat_values
 
-        # TODO --##--
-        resource["published"] = [
-            {"datetime": web.utcnow(), "timezone": "America/Los_Angeles"}
-        ]
-
-        # for date_prop in ("published", "updated"):
-        #     try:
-        #         resource[date_prop][0]["datetime"] = pendulum.from_format(
-        #             resource[date_prop][0]["datetime"], "YYYY-MM-DDTHH:mm:ssZ"
-        #         )
-        #         # TODO assert `timezone` exists
-        #     except KeyError:
-        #         pass
-
-        # if "published" in resource:
-        #     resource["published"][0]["datetime"] = \
-        #         pendulum.from_format(resource["published"][0]["datetime"],
-        #                              "YYYY-MM-DDTHH:mm:ssZ")
-        #     published = resource["published"]
-        # else:
-        #     published = [{"datetime": web.utcnow(),
-        #                   "timezone": "America/Los_Angeles"}]
-        # TODO --##--
+        config = get_config()
+        # TODO deal with `updated`/`drafted`?
+        if "published" in resource:
+            # TODO accept simple eg. published=2020-2-20, published=2020-2-20T02:22:22
+            # XXX resource["published"][0]["datetime"] = pendulum.from_format(
+            # XXX     resource["published"][0]["datetime"], "YYYY-MM-DDTHH:mm:ssZ"
+            # XXX )
+            # XXX published = resource["published"]
+            pass
+        else:
+            resource["published"] = [
+                {
+                    "datetime": web.utcnow().isoformat(),
+                    "timezone": config["timezone"],
+                }
+            ]
+        published = pendulum.parse(
+            resource["published"][0]["datetime"],
+            tz=resource["published"][0]["timezone"],
+        )
 
         resource["visibility"] = resource.get("visibility", ["public"])
         # XXX resource["channel"] = resource.get("channel", [])
@@ -249,7 +261,6 @@ class LocalClient:
         #     # if resource["uid"] == str(web.uri(tx.host.name)):
         #     #     pass
         resource.update(url=urls, type=[resource_type])
-        published = resource["published"][0]["datetime"]
         permalink_base = f"/{web.timeslug(published)}"
 
         def generate_trailer():
@@ -289,18 +300,14 @@ class LocalClient:
         try:
             resource = tx.db.select(
                 "resources",
-                where="""json_extract(
-                                                 resources.resource,
-                                                 '$.url[0]') == ?""",
+                where="""json_extract(resources.resource, '$.url[0]') == ?""",
                 vals=[url],
             )[0]
         except IndexError:
             try:
                 resource = tx.db.select(
                     "resources",
-                    where="""json_extract(
-                                                     resources.resource,
-                                                     '$.alias[0]') == ?""",
+                    where="""json_extract(resources.resource, '$.alias[0]') == ?""",
                     vals=[url],
                 )[0]
             except IndexError:
@@ -462,7 +469,6 @@ class MicropubEndpoint:
             return templates.activity(
                 channels, entries, cards, events, reviews, rooms, media
             )
-        syndication_endpoints = []
 
         def generate_channels():
             return [
@@ -470,16 +476,10 @@ class MicropubEndpoint:
                 for r in local_client.get_channels()
             ]
 
+        # TODO XXX elif form.q == "channel":
+        # TODO XXX     response = {"channels": generate_channels()}
         if form.q == "config":
-            response = {
-                "q": ["category", "contact", "source", "syndicate-to"],
-                "media-endpoint": f"https://{tx.host.name}/pub/media",
-                "syndicate-to": syndication_endpoints,
-                "visibility": ["public", "unlisted", "private"],
-            }
-            # TODO "channels": generate_channels()}
-        elif form.q == "channel":
-            response = {"channels": generate_channels()}
+            response = get_config()
         elif form.q == "source":
             response = {}
             if "search" in form:
@@ -1062,4 +1062,4 @@ class MicropubTextClient:
     """."""
 
     def get(self):
-        return templates.editor_text()
+        return templates.editor_text(get_config())

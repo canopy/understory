@@ -1,3 +1,5 @@
 from pprint import pformat
 
-__all__ = ["pformat"]
+import pendulum
+
+__all__ = ["pformat", "pendulum"]
