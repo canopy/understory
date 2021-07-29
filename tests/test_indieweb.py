@@ -170,67 +170,67 @@ class TestIndieAuthDocs:
         bob.get("http://bob.example:9911")
         shot("Check your homepage", "You're live!", "Alice", "Bob")
 
-    def test_install_addon(self, alice, bob):
-        alice.install_addon(
-            "/home/angelo/Working/liana/liana-0.0.1-fx.xpi", temporary=True
-        )
-        bob.install_addon(
-            "/home/angelo/Working/liana/liana-0.0.1-fx.xpi", temporary=True
-        )
-        shot(
-            "Install the Liana Browser Extension",
-            "",
-            "Alice",
-            "Bob",
-        )
-        rect = alice.get_window_rect()
-        top = rect["y"]
-        right = rect["x"] + rect["width"]
-        sh.xdotool(
-            "mousemove",
-            right - 140,
-            top + 160,
-            "click",
-            1,
-        )
+    # def test_install_addon(self, alice, bob):
+    #     alice.install_addon(
+    #         "/home/angelo/Working/liana/liana-0.0.1-fx.xpi", temporary=True
+    #     )
+    #     bob.install_addon(
+    #         "/home/angelo/Working/liana/liana-0.0.1-fx.xpi", temporary=True
+    #     )
+    #     shot(
+    #         "Install the Liana Browser Extension",
+    #         "",
+    #         "Alice",
+    #         "Bob",
+    #     )
+    #     rect = alice.get_window_rect()
+    #     top = rect["y"]
+    #     right = rect["x"] + rect["width"]
+    #     sh.xdotool(
+    #         "mousemove",
+    #         right - 140,
+    #         top + 160,
+    #         "click",
+    #         1,
+    #     )
 
-    def test_sign_in_to_addon(self, alice, bob):
-        rect = alice.get_window_rect()
-        top = rect["y"]
-        right = rect["x"] + rect["width"]
-        sh.xdotool(
-            "mousemove",
-            right - 60,
-            top + 65,
-            "click",
-            1,
-            "mousemove",
-            right - 100,
-            top + 100,
-            "click",
-            1,
-            "type",
-            "http://alice.example:9910",
-        )
-        time.sleep(3)
-        shot(
-            "",
-            "",
-            "Alice",
-        )
-        sh.xdotool(
-            "mousemove",
-            right - 80,
-            top + 130,
-            "click",
-            1,
-        )
-        time.sleep(3)
-        shot(
-            "",
-            "",
-            "Alice",
-        )
+    # def test_sign_in_to_addon(self, alice, bob):
+    #     rect = alice.get_window_rect()
+    #     top = rect["y"]
+    #     right = rect["x"] + rect["width"]
+    #     sh.xdotool(
+    #         "mousemove",
+    #         right - 60,
+    #         top + 65,
+    #         "click",
+    #         1,
+    #         "mousemove",
+    #         right - 100,
+    #         top + 100,
+    #         "click",
+    #         1,
+    #         "type",
+    #         "http://alice.example:9910",
+    #     )
+    #     time.sleep(3)
+    #     shot(
+    #         "",
+    #         "",
+    #         "Alice",
+    #     )
+    #     sh.xdotool(
+    #         "mousemove",
+    #         right - 80,
+    #         top + 130,
+    #         "click",
+    #         1,
+    #     )
+    #     time.sleep(3)
+    #     shot(
+    #         "",
+    #         "",
+    #         "Alice",
+    #     )
 
     def test_sign_in_to_each_other(self, alice, bob):
         alice.get("http://bob.example:9911/access/sign-in?me=http://alice.example:9910")
