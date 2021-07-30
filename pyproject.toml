@@ -21,7 +21,6 @@ pkg = "understory.pkg.__main__:main"
 web = "understory.web.__main__:main"
 
 [tool.poetry.plugins."web.apps"]
-host = "understory.host:app"
 content = "understory.indieweb:content"
 # db = "understory.indieweb:db"
 # cache = "understory.indieweb:cache"
@@ -70,7 +69,6 @@ cssselect = "^1.1.0"
 dnspython = "^2.1.0"
 feedparser = "^6.0.8"
 regex = "^2021.7.6"
-libgaea = "^0.0.5"
 
 [tool.poetry.dev-dependencies]
 ipython = "^7.25.0"
