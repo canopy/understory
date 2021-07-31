@@ -26,6 +26,7 @@ def init_owner(name):
         card={"version": version, "name": [name], "uid": [uid], "url": [uid]},
     )
     tx.user.session = {"uid": uid, "name": name}
+    tx.user.is_owner = True
     tx.host.owner = get_owner()
     return uid, passphrase
 

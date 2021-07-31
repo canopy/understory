@@ -43,15 +43,15 @@ def site(name: str, host: str = None, port: int = None) -> web.Application:
         tx.host.cache = web.cache(db=db)
         tx.host.kv = kv.db(host, ":", {"jobs": "list"})
         yield
-        if tx.request.uri.path == "" and tx.response.body:
-            doc = web.parse(tx.response.body)
-            try:
-                head = doc.select("head")[0]
-            except IndexError:
-                tx.response.body = (
-                    f"<!doctype html><head></head>"
-                    f"<body>{tx.response.body}</body></html>"
-                )
+        # TODO XXX if tx.request.uri.path == "" and tx.response.body:
+        # TODO XXX     doc = web.parse(tx.response.body)
+        # TODO XXX     try:
+        # TODO XXX         head = doc.select("head")[0]
+        # TODO XXX     except IndexError:
+        # TODO XXX         tx.response.body = (
+        # TODO XXX             f"<!doctype html><head></head>"
+        # TODO XXX             f"<body>{tx.response.body}</body></html>"
+        # TODO XXX         )
 
     return web.application(
         name,

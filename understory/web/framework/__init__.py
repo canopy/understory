@@ -831,20 +831,29 @@ class Application:
                 raise BadRequest("bad filename")
             asset = self.static_path / asset_path
             try:
-                with asset.open() as fp:
+                with asset.open("rb") as fp:
                     content = fp.read()
             except FileNotFoundError:
                 asset = pathlib.Path(__file__).parent / "static" / asset_path
                 try:
-                    with asset.open() as fp:
+                    with asset.open("rb") as fp:
                         content = fp.read()
                 except FileNotFoundError:
                     raise NotFound("file not found")
-            content_types = {".css": "text/css", ".js": "application/javascript"}
+            content_types = {
+                ".css": "text/css",
+                ".js": "application/javascript",
+                ".gif": "image/gif",
+                ".svg": "image/svg+xml",
+            }
             # tx.response.headers.content_type = content_types[asset.suffix]
             header("Content-Type", content_types[asset.suffix])
             start_response("200 OK", tx.response.headers.wsgi)
-            return [bytes(content, "utf-8")]
+            try:
+                content = bytes(content, "utf-8")
+            except TypeError:
+                content
+            return [content]
 
         try:
             tx.host._contextualize(

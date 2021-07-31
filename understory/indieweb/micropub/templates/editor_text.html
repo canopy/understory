@@ -76,7 +76,7 @@ const pub = new MicropubClient("/pub")
 document.addEventListener('DOMContentLoaded', () => {
   pub.getConfig().then(data => console.log(data))
 })
-document.querySelector("form").addEventListener("submit", (event) => {
+document.querySelector("form#editor").addEventListener("submit", (event) => {
   event.preventDefault()
   // let myForm = document.getElementById('editor')
   // let formData = new FormData(myForm)
