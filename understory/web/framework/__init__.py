@@ -1179,6 +1179,8 @@ session_table_sql = dict(
 def resume_session(handler, app):
     """."""
     # TODO monitor expiration (default_session_timeout)
+    tx.db.define("sessions", **session_table_sql)
+    add_job_tables(tx.db)
     data = {}
     try:
         identifier = tx.request.headers["cookie"].morsels["session"]

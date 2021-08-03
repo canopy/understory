@@ -34,11 +34,9 @@ templates = mm.templates(__name__)
 
 
 def site(name: str, host: str = None, port: int = None) -> web.Application:
-    def wrap(handler, app):
+    def set_data_sources(handler, app):
         host = tx.request.uri.host  # TODO FIXME check for filename safety!!
         db = sql.db(f"{host}.db")
-        db.define("sessions", **web.session_table_sql)
-        web.add_job_tables(db)
         tx.host.db = db
         tx.host.cache = web.cache(db=db)
         tx.host.kv = kv.db(host, ":", {"jobs": "list"})
@@ -70,7 +68,7 @@ def site(name: str, host: str = None, port: int = None) -> web.Application:
             content,
         ),
         wrappers=(
-            wrap,
+            set_data_sources,
             web.resume_session,
             indieauth.server.wrap,
             indieauth.client.wrap,
