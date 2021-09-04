@@ -15,6 +15,7 @@ import contextlib
 import datetime
 import functools
 import json
+import logging
 import os
 import pathlib
 
@@ -22,8 +23,8 @@ import pendulum
 
 try:
     from pysqlite3 import dbapi2 as sqlite3
-except ImportError:
-    print("falling back to sqlite3 in the standard library")  # TODO warning
+except (ImportError, NameError):  # NOTE pysqlite3.dbapi2 raises NameError
+    logging.info("falling back to sqlite3 in the standard library")
     import sqlite3
 
 from understory import solarized
@@ -96,6 +97,24 @@ def from_json(val):
     return json.loads(val, object_hook=f)
 
 
+class Model:
+    def __init__(self, name, version, **schemas):
+        self.name = name
+        self.version = version
+        self.schemas = schemas
+        self.migrations = {}
+
+    def __call__(self, version):
+        def migration(f):
+            self.migrations[version] = f
+            return f
+
+        return migration
+
+
+model = Model
+
+
 class JSONEncoder(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, (datetime.date, datetime.datetime)):
@@ -138,8 +157,9 @@ class Database:
     def __init__(self, path):
         self.path = path
         for command in (
+            "pragma",
             "create",
-            "alter",
+            "rename_table",
             "drop",
             "insert",
             "replace",
@@ -147,6 +167,9 @@ class Database:
             "update",
             "delete",
             "columns",
+            "add_column",
+            "drop_column",
+            "rename_column",
         ):
 
             def single_statement_cursor(command):
@@ -171,6 +194,7 @@ class Database:
             conn.enable_load_extension(False)
             conn.execute("SELECT icu_load_collation('en_US', 'UNICODE');")
         conn.row_factory = sqlite3.Row
+        # conn.execute("PRAGMA user_version")
         self.conn = conn
 
         self.debug = False
@@ -178,47 +202,44 @@ class Database:
     def __repr__(self):
         return f"sql.db: {self.path}"
 
-    def define(self, table, **schema):
-        """
-        define multiple tables at once migrating them if necessary
-
-        """
-        # TODO bump version a la "PRAGMA user_version = 1;" and store change
-        # TODO store backups
-        try:
-            self.create(
-                table,
-                ", ".join(
-                    f"{row} {definition}" for row, definition in list(schema.items())
-                ),
-            )
-        except self.OperationalError:
-            pass
-        # while table_schemas:
-        #     for table, schema in list(table_schemas.items()):
-        #         print(table)
-        #         import textwrap
-        #         print(textwrap.dedent(schema))
-        #         table_schemas.pop(table)
-        #         new_table = "new_{}".format(table)
-        #         self.create(table, schema)
-        #         self.create(new_table, schema)
-        #         with self.transaction as cur:
-        #             old_columns = cur.columns(table)
-        #             new_columns = cur.columns(new_table)
-        #             if old_columns == new_columns:
-        #                 cur.drop(new_table)
-        #                 continue
-        #             old_names = {col[0] for col in old_columns}
-        #             new_names = {col[0] for col in new_columns}
-        #             cols = list(old_names.intersection(new_names))
-        #             print("Migrating table `{}`..".format(table), end=" ")
-        #             for row in cur.select(table, what=", ".join(cols)):
-        #                 cur.insert(new_table, dict(zip(cols, list(row))))
-        #             cur.drop(table)
-        #             cur.cur.execute(f"""ALTER TABLE {new_table}
-        #                                 RENAME TO {table}""")
-        #         print("success")
+    # XXX def define(self, table, **schema):
+    # XXX     """define multiple tables at once migrating them if necessary"""
+    # XXX     # TODO bump version a la "PRAGMA user_version = 1;" and store change
+    # XXX     # TODO store backups
+    # XXX     try:
+    # XXX         self.create(
+    # XXX             table,
+    # XXX             ", ".join(
+    # XXX             f"{row} {definition}" for row, definition in list(schema.items())
+    # XXX             ),
+    # XXX         )
+    # XXX     except self.OperationalError:
+    # XXX         pass
+    # XXX     # while table_schemas:
+    # XXX     #     for table, schema in list(table_schemas.items()):
+    # XXX     #         print(table)
+    # XXX     #         import textwrap
+    # XXX     #         print(textwrap.dedent(schema))
+    # XXX     #         table_schemas.pop(table)
+    # XXX     #         new_table = "new_{}".format(table)
+    # XXX     #         self.create(table, schema)
+    # XXX     #         self.create(new_table, schema)
+    # XXX     #         with self.transaction as cur:
+    # XXX     #             old_columns = cur.columns(table)
+    # XXX     #             new_columns = cur.columns(new_table)
+    # XXX     #             if old_columns == new_columns:
+    # XXX     #                 cur.drop(new_table)
+    # XXX     #                 continue
+    # XXX     #             old_names = {col[0] for col in old_columns}
+    # XXX     #             new_names = {col[0] for col in new_columns}
+    # XXX     #             cols = list(old_names.intersection(new_names))
+    # XXX     #             print("Migrating table `{}`..".format(table), end=" ")
+    # XXX     #             for row in cur.select(table, what=", ".join(cols)):
+    # XXX     #                 cur.insert(new_table, dict(zip(cols, list(row))))
+    # XXX     #             cur.drop(table)
+    # XXX     #             cur.cur.execute(f"""ALTER TABLE {new_table}
+    # XXX     #                                 RENAME TO {table}""")
+    # XXX     #         print("success")
 
     @property
     def tables(self):
@@ -262,7 +283,7 @@ class Database:
         pathlib.Path(self.path).unlink()
 
 
-def db(path=None, **table_schemas) -> Database:
+def db(path, *models) -> Database:
     """
     return a connection to a `SQLite` database
 
@@ -271,18 +292,47 @@ def db(path=None, **table_schemas) -> Database:
     Note: `table_schemas` should not include a table (dict key) named "path".
 
     """
-    if not path:
-        path = os.environ.get("SQLDB", None)
-    if path:
-        dbi = Database(path)
-        for table, schema in table_schemas.items():
-            dbi.define(table, **schema)
-        return dbi
+    # XXX if not path:
+    # XXX     path = os.environ.get("SQLDB", None)
+    # XXX if path:
+
+    dbi = Database(path)
+    current_models = {}
+    try:
+        dbi.create("_models", "name TEXT, version INTEGER")
+    except dbi.OperationalError:
+        for model in dbi.select("_models"):
+            current_models[model["name"]] = model["version"]
+    for model in models:
+        try:
+            current_version = current_models[model.name]
+        except KeyError:  # doesn't exist, create all tables in model
+            for table, schema in model.schemas.items():
+                dbi.create(
+                    table,
+                    ", ".join(
+                        f"{col} {definition}" for col, definition in schema.items()
+                    ),
+                )
+            dbi.insert("_models", name=model.name, version=model.version)
+            current_models[model.name] = model.version
+            continue
+        if current_version == model.version:
+            continue  # model exists and is up-to-date
+        elif current_version > model.version:
+            raise Exception("Your database version is ahead of your software version.")
+        elif current_version < model.version:
+            for migration in range(current_version + 1, model.version + 1):
+                model.migrations[migration](dbi)
+            dbi.update(
+                "_models", where="name = ?", vals=[model.name], version=model.version
+            )
+    return dbi
 
 
 class Cursor:
 
-    """ """
+    """"""
 
     IntegrityError = sqlite3.IntegrityError
     OperationalError = sqlite3.OperationalError
@@ -290,6 +340,12 @@ class Cursor:
     def __init__(self, cur):
         self.cur = cur
         self.debug = False
+
+    def pragma(self, command, value=None):
+        if value is None:
+            self.cur.execute(f"PRAGMA {command}")
+            return self.cur.fetchone()[command]
+        self.cur.execute(f"PRAGMA {command} = {value}")
 
     def create(self, table, schema):
         """
@@ -303,11 +359,9 @@ class Cursor:
             sql = f"CREATE TABLE {table} ({schema})"
         self.cur.execute(sql)
 
-    def alter(self, table):
-        """
-        alert a table
-
-        """
+    def rename_table(self, table, new_table):
+        """Rename a table."""
+        self.cur.execute(f"ALTER TABLE {table} RENAME TO {new_table}")
 
     def drop(self, *tables):
         """
@@ -315,8 +369,7 @@ class Cursor:
 
         """
         for table in tables:
-            sql = "DROP TABLE {}".format(table)
-            self.cur.execute(sql)
+            self.cur.execute(f"DROP TABLE {table}")
 
     def insert(self, table, *records, _force=False, **record):
         return self._insert("insert", table, *records, _force=False, **record)
@@ -496,11 +549,20 @@ class Cursor:
             self.cur.execute(sql)
 
     def columns(self, table):
-        """
-        return columns for given table
-
-        """
+        """Return columns for given table."""
         return [
             list(column)[1:]
             for column in self.cur.execute("PRAGMA table_info({})".format(table))
         ]
+
+    def add_column(self, table, column_def):
+        """Add a column to given table."""
+        self.cur.execute(f"ALTER TABLE {table} ADD COLUMN {column_def}")
+
+    def drop_column(self, table, column):
+        """Add a column to given table."""
+        self.cur.execute(f"ALTER TABLE {table} DROP COLUMN {column}")
+
+    def rename_column(self, table, column, new_column):
+        """Rename a column of given table."""
+        self.cur.execute(f"ALTER TABLE {table} RENAME COLUMN {column} TO {new_column}")

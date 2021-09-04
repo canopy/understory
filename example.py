@@ -1,4 +1,3 @@
 from understory import indieweb
 
-alice = indieweb.site("AliceExample")
-bob = indieweb.site("BobExample")
+app = indieweb.personal_site(__name__)

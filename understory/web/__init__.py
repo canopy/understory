@@ -15,7 +15,6 @@ import pendulum
 from dns import resolver as dns
 from hstspreload import in_hsts_preload
 from requests.exceptions import ConnectionError
-
 from understory import mf, mm
 from understory.mkdn import render as mkdn
 from understory.mm import Template as template  # noqa
@@ -26,6 +25,7 @@ from . import agent, braid, framework
 from .agent import *  # noqa
 from .braid import *  # noqa
 from .framework import *  # noqa
+from .framework import data_app, debug_app
 from .response import Status  # noqa
 from .response import (OK, Accepted, BadRequest, Conflict, Created, Forbidden,
                        Found, Gone, MethodNotAllowed, MultiStatus, NoContent,
@@ -50,6 +50,8 @@ __all__ = [
     "websub",
     "run_queue",
     "uri",
+    "data_app",
+    "debug_app",
     "Created",
     "ConnectionError",
 ]

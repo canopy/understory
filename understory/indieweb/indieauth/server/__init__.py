@@ -1,46 +1,94 @@
-"""IndieAuth server app."""
+"""An IndieAuth server."""
 
 from __future__ import annotations
 
 import base64
 import hashlib
 
-from understory import web
+from understory import sql, web
 from understory.web import tx
 
-app = web.application(
-    "IndieAuthServer", mount_prefix="auth", db=False, client_id=r"[\w/.]+"
+app = web.application("IndieAuthServer", mount_prefix="auth", client_id=r"[\w/.]+")
+model = sql.model(
+    "IndieAuthServer",
+    0,
+    auths={
+        "auth_id": "TEXT",
+        "initiated": "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP",
+        "revoked": "DATETIME",
+        "code": "TEXT",
+        "client_id": "TEXT",
+        "client_name": "TEXT",
+        "code_challenge": "TEXT",
+        "code_challenge_method": "TEXT",
+        "redirect_uri": "TEXT",
+        "response": "JSON",
+        "token": "TEXT",
+    },
+    credentials={
+        "created": "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP",
+        "salt": "BLOB",
+        "scrypt_hash": "BLOB",
+    },
 )
-profile = web.application("IndieAuthProfile", mount_prefix="profile", db=False)
 templates = web.templates(__name__)
+
+supported_scopes = [
+    "create",
+    "draft",
+    "update",
+    "delete",
+    "media",
+    "profile",
+    "email",
+]
+
+
+def get_card() -> dict | None:
+    """Return a dict of owner details or None if no known owner."""
+    try:
+        card = tx.db.select("resources", where="permalink = ?", vals=["/"])[0][
+            "resource"
+        ]
+    except IndexError:
+        card = None
+    return card
+
+
+def get_resume() -> dict | None:
+    """Return a dict of owner's resume details or None if nothing exists yet."""
+    try:
+        resume = tx.db.select("identities")[0]["resume"]
+    except IndexError:
+        resume = None
+    return resume
 
 
 def init_owner(name):
-    """Initialize owner of the request domain."""
+    """Initialize owner of the requested domain."""
     salt, scrypt_hash, passphrase = web.generate_passphrase()
     tx.db.insert("credentials", salt=salt, scrypt_hash=scrypt_hash)
     version = web.nbrandom(3)
     uid = str(web.uri(tx.origin))
     tx.db.insert(
-        "identities",
-        card={"version": version, "name": [name], "uid": [uid], "url": [uid]},
+        "resources",
+        permalink="/",
+        version=version,
+        resource={
+            "name": [name],
+            "type": ["card"],
+            "url": [uid],
+            "uid": [uid],
+            "visibility": ["public"],
+        },
     )
     tx.user.session = {"uid": uid, "name": name}
     tx.user.is_owner = True
-    tx.host.owner = get_owner()
+    tx.host.owner = get_card()
     return uid, passphrase
 
 
-def get_owner() -> dict | None:
-    """Return a dict of owner details or None if no know owner."""
-    try:
-        owner = tx.db.select("identities")[0]["card"]
-    except IndexError:
-        owner = None
-    return owner
-
-
-def get_client(client_id):
+def discover_client(client_id):
     """Return the client name and author if provided."""
     # TODO FIXME unapply_dns was here..
     client = {"name": None, "url": web.uri(client_id).normalized}
@@ -87,28 +135,7 @@ def get_revoked():
 
 def wrap(handler, app):
     """Ensure server links are in head of root document."""
-    tx.db.define(
-        "auths",
-        auth_id="TEXT",
-        initiated="DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP",
-        revoked="DATETIME",
-        code="TEXT",
-        client_id="TEXT",
-        client_name="TEXT",
-        code_challenge="TEXT",
-        code_challenge_method="TEXT",
-        redirect_uri="TEXT",
-        response="JSON",
-        token="TEXT",
-    )
-    tx.db.define(
-        "credentials",
-        created="DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP",
-        salt="BLOB",
-        scrypt_hash="BLOB",
-    )
-    tx.db.define("identities", card="JSON")
-    tx.host.owner = get_owner()
+    tx.host.owner = get_card()
     if not tx.host.owner:
         web.header("Content-Type", "text/html")
         if tx.request.method == "GET":
@@ -160,62 +187,71 @@ class AuthorizationEndpoint:
     """IndieAuth server `authorization endpoint`."""
 
     def get(self):
-        """Initiate a third-party sign-in falling back"""
+        """Return a consent screen for a third-party site sign-in."""
         if not tx.user.is_owner:
-            raise web.Unauthorized("This area is for the site owner's use only.")
+            raise web.OK(templates.root(get_card(), get_clients()))
         try:
             form = web.form(
                 "response_type",
                 "client_id",
                 "redirect_uri",
                 "state",
-                "code_challenge",
-                "code_challenge_method",
-                scope="",
+                scope=[],
             )
         except web.BadRequest:
             return templates.authorizations(get_clients(), get_active(), get_revoked())
-        client, developer = get_client(form.client_id)
+        if form.response_type not in (
+            "code",
+            "id",  # XXX treat the same as "code" for backwards-compatibility
+        ):
+            raise web.BadRequest('`response_type` must be "code".')
+        client, developer = discover_client(form.client_id)
         tx.user.session.update(
             client_id=form.client_id,
             client_name=client["name"],
             redirect_uri=form.redirect_uri,
             state=form.state,
-            code_challenge=form.code_challenge,
-            code_challenge_method=form.code_challenge_method,
         )
-        supported_scopes = [
-            "create",
-            "draft",
-            "update",
-            "delete",
-            "media",
-            "profile",
-            "email",
-        ]
-        scopes = [s for s in form.scope.split() if s in supported_scopes]
-        return templates.signin(client, developer, scopes)
+        try:
+            code_details = web.form("code_challenge", "code_challenge_method")
+        except web.BadRequest:
+            pass
+        else:
+            tx.user.session.update(
+                code_challenge=code_details.code_challenge,
+                code_challenge_method=code_details.code_challenge_method,
+            )
+        return templates.signin(client, developer, form.scope, supported_scopes)
 
     def post(self):
+        """Handle "Profile URL" flow response."""
+        auth_response, complete_redemption = redeem_authorization_code()
+        complete_redemption(auth_response)
+
+
+@app.route(r"consent")
+class AuthorizationConsent:
+    """The authorization consent screen."""
+
+    def post(self):
+        """Handle consent screen action."""
         form = web.form("action", scopes=[])
         redirect_uri = web.uri(tx.user.session["redirect_uri"])
         if form.action == "cancel":
             raise web.Found(redirect_uri)
         code = web.nbrandom(32)
-        s = tx.user.session
-        decoded_code_challenge = base64.b64decode(s["code_challenge"]).decode()
         while True:
             try:
                 tx.db.insert(
                     "auths",
-                    auth_id=web.nbrandom(3),
+                    auth_id=web.nbrandom(4),
                     code=code,
-                    code_challenge=decoded_code_challenge,
-                    code_challenge_method=s["code_challenge_method"],
-                    client_id=s["client_id"],
-                    client_name=s["client_name"],
-                    redirect_uri=s["redirect_uri"],
-                    response={"scope": " ".join(form.scopes)},
+                    code_challenge=tx.user.session["code_challenge"],
+                    code_challenge_method=tx.user.session["code_challenge_method"],
+                    client_id=tx.user.session["client_id"],
+                    client_name=tx.user.session["client_name"],
+                    redirect_uri=tx.user.session["redirect_uri"],
+                    response={"scope": form.scopes},
                 )
             except tx.db.IntegrityError:
                 continue
@@ -234,51 +270,71 @@ class TokenEndpoint:
 
     def post(self):
         """Create or revoke an access token."""
+        # TODO token introspection
+        # TODO token verification
         try:
-            form = web.form("action", "token")
-            if form.action == "revoke":
-                tx.db.update(
-                    "auths",
-                    revoked=web.utcnow(),
-                    where="""json_extract(response, '$.access_token') = ?""",
-                    vals=[form.token],
-                )
-                raise web.OK("")
+            auth_response, complete_redemption = redeem_authorization_code()
         except web.BadRequest:
             pass
-        form = web.form(
-            "grant_type", "code", "client_id", "redirect_uri", "code_verifier"
-        )
-        if form.grant_type != "authorization_code":
-            raise web.Forbidden("only grant_type=authorization_code supported")
-        auth = tx.db.select("auths", where="code = ?", vals=[form.code])[0]
-        computed_code_challenge = hashlib.sha256(
-            form.code_verifier.encode("ascii")
-        ).hexdigest()
-        if auth["code_challenge"] != computed_code_challenge:
+        else:
+            # handle "Access Token" response
+            if not auth_response["scope"]:
+                raise web.BadRequest("Access Token request requires a scope")
+            auth_response.update(
+                access_token=f"secret-token:{web.nbrandom(12)}",
+                token_type="Bearer",
+            )
+            complete_redemption(auth_response)
+        # perform revocation
+        form = web.form("action", "token")
+        if form.action == "revoke":
+            tx.db.update(
+                "auths",
+                revoked=web.utcnow(),
+                where="""json_extract(response, '$.access_token') = ?""",
+                vals=[form.token],
+            )
+            raise web.OK("")
+
+
+def redeem_authorization_code():
+    """Verify authenticity and return list of requested scopes."""
+    # TODO verify authenticity
+    # TODO grant_type=refresh_token
+    form = web.form(
+        "code", "client_id", "redirect_uri", grant_type="authorization_code"
+    )
+    if form.grant_type not in ("authorization_code", "refresh_token"):
+        raise web.Forbidden(f"`grant_type` {form.grant_type} not supported")
+    auth = tx.db.select("auths", where="code = ?", vals=[form.code])[0]
+    if "code_verifier" in form:
+        if not auth["code_challenge"]:
+            raise web.BadRequest("`code_verifier` without a `code_challenge`")
+        if auth["code_challenge"] != base64.urlsafe_b64encode(
+            hashlib.sha256(form.code_verifier.encode("ascii")).digest()
+        ).decode().rstrip("="):
             raise web.Forbidden("code mismatch")
-        response = auth["response"]
-        scope = response["scope"].split()
-        if "profile" in scope:
-            profile = {"name": tx.host.owner["name"][0]}
-            if "email" in scope:
+    elif auth["code_challenge"]:
+        raise web.BadRequest("`code_challenge` without `code_verifier`")
+
+    def complete_redemption(response):
+        response["me"] = f"{tx.request.uri.scheme}://{tx.request.uri.netloc}"
+        if "profile" in response["scope"]:
+            response["profile"] = {
+                "name": tx.host.owner["name"][0],
+                "url": "TODO",
+                "photo": "TODO",
+            }
+            if "email" in response["scope"]:
                 try:
-                    profile["email"] = tx.host.owner["email"][0]
+                    auth_response["profile"]["email"] = tx.host.owner["email"][0]
                 except KeyError:
                     pass
-            response["profile"] = profile
-        if scope and self.is_token_request(scope):
-            response.update(
-                access_token=f"secret-token:{web.nbrandom(12)}", token_type="Bearer"
-            )
-            response["me"] = f"{tx.request.uri.scheme}://{tx.request.uri.netloc}"
         tx.db.update("auths", response=response, where="code = ?", vals=[auth["code"]])
         web.header("Content-Type", "application/json")
-        return response
+        raise web.OK(response)
 
-    def is_token_request(self, scope):
-        """Determine whether the list of scopes dictates a token request."""
-        return bool(len([s for s in scope if s not in ("profile", "email")]))
+    return auth["response"], complete_redemption
 
 
 @app.route(r"tickets")
@@ -303,10 +359,8 @@ class Clients:
 
 
 @app.route(r"clients/{client_id}")
-class Client:
+class Client(web.Resource):
     """An authorized client."""
-
-    client_id: str
 
     def get(self):
         auths = tx.db.select(
@@ -316,16 +370,6 @@ class Client:
             order="redirect_uri, initiated DESC",
         )
         return templates.client(auths)
-
-
-# XXX @root.route(r"")
-# XXX class Authentication:
-# XXX     """Authentication root dynamically manages either or both of server and client."""
-# XXX
-# XXX     def get(self):
-# XXX         return templates.root(
-# XXX             server.get_owner(), server.get_clients(), client.get_users()
-# XXX         )
 
 
 @app.route(r"sign-in")
@@ -362,21 +406,6 @@ class SignOut:
         raise web.SeeOther(f"/{return_to}")
 
 
-@profile.route(r"")
-class Profile:
-    """"""
-
-    def get(self):
-        return templates.identity(get_owner())
-
-    def post(self):
-        if not tx.user.is_owner:
-            raise web.Unauthorized("must be owner")
-        return self.set_name()
-
-    def set_name(self):
-        name = web.form("name").name
-        card = tx.db.select("identities")[0]["card"]
-        card.update(name=[name])
-        tx.db.update("identities", card=card)
-        return name
+@model(1)
+def change_name(db):
+    db.rename_column("auths", "revoked", "revoced")

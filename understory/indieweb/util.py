@@ -1,3 +1,9 @@
+SILOS = {
+    "GitHub": "https://github.com/(?P<user>.+)",
+    "Twitter": "https://twitter.com/(?P<user>.+)",
+}
+
+
 def discover_post_type(properties):
     """Return the discovered post type."""
     if "photo" in properties:

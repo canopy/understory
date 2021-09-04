@@ -1,0 +1,29 @@
+$def with (owner, posts)
+
+$ get = lambda x: owner.get(x, [""])[0]
+
+
+<div><label><small>Note:</small><br>
+<textarea name=note>$get("note")</textarea><label></div>
+
+<div><label><small>GitHub:</small><br>
+<input type=text name=github_username value="$get('')" placeholder="username"><label>
+<input type=text name=github_token value="" placeholder="token"><label></div>
+
+<div><label><small>Twitter:</small><br>
+<input type=text name=twitter value="" placeholder="username"><label>
+<input type=text name=twitter_passphrase value="" placeholder="passphrase"><label></div>
+
+<div><label><small>Hacker News:</small><br>
+<input type=text name=hackernews value="" placeholder="username"><label>
+<input type=text name=hackernews_passphrase value="" placeholder="passphrase"><label></div>
+
+<div><label><small>Orgs:</small><br>
+<input type=text name=orgs value=""><label></div>
+
+<div><label><small>Skills:</small><br>
+<input type=text name=skills value=""><label></div>
+
+<button>Save</button>
+
+</form>

@@ -1,10 +1,31 @@
-"""Webmention receiver app and sending helper."""
+"""
+Webmention sender and receiver implementations.
 
-from understory import web
+> Webmention is a simple way to notify any URL when you mention it on
+> your site. From the receiver's perspective, it's a way to request
+> notifications when other sites mention it. 
+
+[0]: https://w3.org/TR/webmention
+
+"""
+
+# TODO salmention
+# TODO vouch
+
+from understory import sql, web
 from understory.web import tx
 
-receiver = web.application(
-    "Webmention", mount_prefix="mentions", mention_id=r"\w+"  # db=False,
+app = web.application("Webmention", mount_prefix="mentions", mention_id=r"\w+")
+model = sql.model(
+    "Webmention",
+    0,
+    mentions={
+        "received": "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP",
+        "mention_id": "TEXT",
+        "data": "JSON",
+        "source": "TEXT",
+        "target": "TEXT",
+    },
 )
 templates = web.templates(__name__)
 
@@ -165,16 +186,8 @@ def store_mention(source, target):
 #     return tx.kv["mentions", path, mention_type].hset(source, mention_id)
 
 
-def wrap_receiver(handler, app):
+def wrap(handler, app):
     """Ensure endpoint link in head of root document."""
-    tx.db.define(
-        "mentions",
-        received="DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP",
-        mention_id="TEXT",
-        data="JSON",
-        source="TEXT",
-        target="TEXT",
-    )
     # TODO sniff referer header for a mention
     # XXX print(f"REFERER: {tx.request.headers.get('Referer')}")
     yield
@@ -190,16 +203,13 @@ def wrap_receiver(handler, app):
         web.header("Link", '</mentions>; rel="webmention"', add=True)
 
 
-receiver.wrap(wrap_receiver, "post")
-
-
 def get_mentions(path):
     if path.startswith("/"):
         path = tx.origin + path
     return tx.db.select("mentions", where="target = ?", vals=[path])
 
 
-@receiver.route(r"")
+@app.route(r"")
 class Mentions:
     """."""
 
@@ -212,7 +222,7 @@ class Mentions:
         raise web.Accepted("webmention received")
 
 
-@receiver.route(r"{mention_id}")
+@app.route(r"{mention_id}")
 class Mention:
     """."""
 

@@ -13,7 +13,6 @@ import pathlib
 import sys
 
 import pkg_resources
-
 from understory import mkdn, solarized
 
 from . import parse
@@ -246,7 +245,7 @@ class TemplatePackage:
         self._globals.update(kwglobals)
         self._cache = {}
 
-    def __getattr__(self, name) -> Template | TemplatePackage:
+    def __getattr__(self, name) -> Template:  # TODO | TemplatePackage
         """
         load a template from root module directory
 

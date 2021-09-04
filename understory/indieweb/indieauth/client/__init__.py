@@ -1,12 +1,23 @@
-"""IndieAuth client app."""
+"""An IndieAuth client."""
 
 import base64
 import hashlib
 
-from understory import web
+from understory import sql, web
 from understory.web import tx, uri
 
-app = web.application("IndieAuthClient", mount_prefix="access", db=False)
+app = web.application("IndieAuthClient", mount_prefix="access")
+model = sql.model(
+    "IndieAuthClient",
+    0,
+    users={
+        "url": "TEXT",
+        "name": "TEXT",
+        "email": "TEXT",
+        "access_token": "TEXT",
+        "account_created": "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP",
+    },
+)
 templates = web.templates(__name__)
 
 
@@ -30,14 +41,6 @@ def get_users():
 def wrap(handler, app):
     """Ensure client database contains users table."""
     # TODO store User Agent and IP address
-    tx.db.define(
-        "users",
-        url="TEXT",
-        name="TEXT",
-        email="TEXT",
-        access_token="TEXT",
-        account_created="DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP",
-    )
     yield
 
 
@@ -80,9 +83,12 @@ class SignIn:
         auth_endpoint["response_type"] = "code"
         auth_endpoint["state"] = tx.user.session["state"] = web.nbrandom(16)
         code_verifier = tx.user.session["code_verifier"] = web.nbrandom(64)
-        code_challenge = hashlib.sha256(code_verifier.encode("ascii")).hexdigest()
-        auth_endpoint["code_challenge"] = base64.b64encode(
-            code_challenge.encode("ascii")
+        auth_endpoint["code_challenge"] = (
+            base64.urlsafe_b64encode(
+                hashlib.sha256(code_verifier.encode("ascii")).digest()
+            )
+            .decode()
+            .rstrip("=")
         )
         auth_endpoint["code_challenge_method"] = "S256"
         auth_endpoint["scope"] = "create draft update delete profile email"

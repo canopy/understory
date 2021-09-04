@@ -71,7 +71,6 @@ div.e-content {
     font-size: 2em; }
 </style>
 
-
 $# $elif type == "identification":
 $#     $ identification = entry["identification-of"][0]
 $#     $var title: Identified $identification["name"]
@@ -82,3 +81,18 @@ $#     $ follow = entry["follow-of"][0]
 $#     $var title: Followed $follow["name"]
 $#     <p><big>Followed <a class=u-follow-of
 $#     href=$follow["url"]>$follow["name"]</a></big></p>
+
+$if tx.user.is_owner:
+    <script src=/static/understory.js crossorigin=anonymous></script>
+    <script>
+    const { MicropubClient } = understory
+    const pub = new MicropubClient('/pub')
+    document.addEventListener('DOMContentLoaded', () => {
+      pub.getConfig().then(data => console.log(data))
+      pub.getCategories().then(data => {
+        data.categories.forEach(cat => {
+          addCategory(cat)
+        })
+      })
+    })
+    </script>

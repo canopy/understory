@@ -87,6 +87,17 @@ class MicropubClient {
             }
         });
     }
+    getCategories() {
+        return fetch(this.endpoint + '?q=category', {
+            headers: this.headers
+        }).then(response => {
+            if (response.status === 200 || response.status === 201) {
+                return response.json().then(data => {
+                    return data;
+                });
+            }
+        });
+    }
     create(type, payload, visibility) {
         const headers = this.headers;
         headers['content-type'] = 'application/json';
@@ -125,9 +136,10 @@ class MicropubClient {
             }
         });
     }
-    update(url, payload) {
-        payload.action = 'update';
-        payload.url = url;
+    update(url, operation, property, values) {
+        const payload = { action: 'update', url: url };
+        payload[operation] = {};
+        payload[operation][property] = values;
         return fetch(this.endpoint, {
             method: 'POST',
             headers: {

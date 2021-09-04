@@ -5,10 +5,7 @@ import os
 import pathlib
 
 import sh
-
-from understory import pkg
-from understory import term
-
+from understory import pkg, term
 
 main = term.application("pkg", pkg.__doc__)
 
@@ -85,7 +82,9 @@ class Publish:
         )["isPrivate"]
         print(sh.poetry("version", self.rule))
         print(sh.poetry("build"))
-        if not private:
+        if private:
+            print(sh.poetry("publish", "-r", "gaea"))
+        else:
             print(sh.poetry("publish"))
         version = str(sh.poetry("version", "-s")).strip()
         print(sh.git("commit", "-a", "-m", f"Release {version}"))
@@ -108,7 +107,7 @@ class Publish:
             "--oneline",
             "--no-decorate",
         )
-        print(sh.gh("release", "create", version, f"dist/{asset}", notes=changelog))
+        # XXX print(sh.gh("release", "create", version, f"dist/{asset}", notes=changelog))
         print(sh.git("pull"))
         print(f"Published release {version}!")
         if stashed:

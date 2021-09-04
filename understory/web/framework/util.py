@@ -10,7 +10,6 @@ import wsgiref.util
 import lxml
 import lxml.html
 from gevent import local
-
 from understory import uri
 
 from ..headers import Headers
@@ -117,10 +116,10 @@ class RequestBody:
     def __init__(self, environ):
         raw_data = environ["wsgi.input"].read()
         try:
-            try:
-                data = raw_data.decode("utf-8")
-            except (AttributeError, UnicodeDecodeError):
-                data = raw_data
+            data = raw_data.decode("utf-8")
+        except (AttributeError, UnicodeDecodeError):
+            data = raw_data
+        try:
             data = json.loads(data)
         except (json.decoder.JSONDecodeError, UnicodeDecodeError):
             try:

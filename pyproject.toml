@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "understory"
-version = "0.0.47"
+version = "0.0.63"
 description = "The tools that power the canopy"
 authors = ["Angelo Gladding <angelo@lahacker.net>"]
 license = "AGPL-3.0-or-later"
@@ -69,6 +69,7 @@ cssselect = "^1.1.0"
 dnspython = "^2.1.0"
 feedparser = "^6.0.8"
 regex = "^2021.7.6"
+rich = "^10.7.0"
 
 [tool.poetry.dev-dependencies]
 ipython = "^7.25.0"

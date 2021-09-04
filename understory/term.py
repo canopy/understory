@@ -73,7 +73,7 @@ def print(*values, sep=" ", end="\n", **kwargs):
     _print(*map(colorize, values), sep=colorize(sep), end=colorize(end), **kwargs)
 
 
-builtins.print = print  # NOTE overriding print()
+# TODO XXX FIXME builtins.print = print  # NOTE overriding print()
 
 
 def get_output_width():

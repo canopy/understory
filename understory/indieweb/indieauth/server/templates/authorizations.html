@@ -31,7 +31,7 @@ $for auth in active:
     <small>$auth["redirect_uri"]<br>
     $auth["initiated"]</small></p>
     $ r = auth["response"]
-    <p>$", ".join(r["scope"].split())</p>
+    <p>$", ".join(r["scope"])</p>
     $if "profile" in r:
         <p>$r["profile"]</p>
     <form action=/auth/revoke method=post>
@@ -45,7 +45,7 @@ $for auth in revoked:
     $auth["client_id"]</a><br>
     $auth["initiated"]</small></p>
     $ r = auth["response"]
-    <p>$", ".join(r["scope"].split())</p>
+    <p>$", ".join(r["scope"])</p>
     $if "profile" in r:
         <p>$r["profile"]</p>
     $if "access_token" in r:

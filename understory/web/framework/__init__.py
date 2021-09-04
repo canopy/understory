@@ -1,14 +1,17 @@
 """
 A web application framework.
 
-Strongly influenced by Aaron Swartz' "anti-framework" `web.py` this
+Strongly influenced by [Aaron Swartz][0]' "anti-framework" `web.py` this
 library aims to cleanly abstract low-level web functionality through
 a Pythonic API.
 
->   Think about the ideal way to write a web app. Write the
->   code to make it happen.
+> Think about the ideal way to write a web app.
+>   Write the code to make it happen.
 
---- Aaron Swartz
+                           ~ Aaron Swartz [1]
+
+[0]: http://aaronsw.com
+[1]: https://webpy.org/philosophy
 
 """
 
@@ -101,11 +104,57 @@ __all__ = [
     "verify_passphrase",
     "sleep",
     "random",
-    "session_table_sql",
     "resume_session",
-    "add_job_tables",
 ]
 
+sessions_model = sql.model(
+    "WebSessions",
+    0,
+    sessions={
+        "timestamp": "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP",
+        "identifier": "TEXT NOT NULL UNIQUE",
+        "data": "TEXT NOT NULL",
+    },
+)
+jobs_model = sql.model(
+    "WebJobs",
+    0,
+    job_signatures={
+        "module": "TEXT",
+        "object": "TEXT",
+        "args": "BLOB",
+        "kwargs": "BLOB",
+        "arghash": "TEXT",
+        "unique": ("module", "object", "arghash"),
+    },
+    job_runs={
+        "job_signature_id": "INTEGER",
+        "job_id": "TEXT UNIQUE",
+        "created": "DATETIME NOT NULL DEFAULT(STRFTIME('%Y-%m-%d %H:%M:%f', 'NOW'))",
+        "started": "DATETIME",
+        "finished": "DATETIME",
+        "start_time": "REAL",
+        "run_time": "REAL",
+        "status": "INTEGER",
+        "output": "TEXT",
+    },
+    job_schedules={
+        "job_signature_id": "INTEGER",
+        "minute": "TEXT",
+        "hour": "TEXT",
+        "day_of_month": "TEXT",
+        "month": "TEXT",
+        "day_of_week": "TEXT",
+        "unique": (
+            "job_signature_id",
+            "minute",
+            "hour",
+            "day_of_month",
+            "month",
+            "day_of_week",
+        ),
+    },
+)
 kvdb = kv.db(
     "web",
     ":",
@@ -147,7 +196,7 @@ def application(
     name,
     prefix=r"",
     mount_prefix=r"",
-    db=True,
+    db=False,
     static=None,  # XXX in favor of explicit mount
     icon=None,  # XXX in favor of explicit mount
     mounts=None,
@@ -240,7 +289,7 @@ def config_servers(root, web_server_config_handler=None):
     )
 
 
-def serve(wsgi_app, port=9300, workers=2):
+def serve(wsgi_app, port=9300, workers=2, socket=None):
     # root = pathlib.Path(app.cfg["root"])
     # watch = app.cfg.get("watch")
     # bg = False
@@ -251,9 +300,13 @@ def serve(wsgi_app, port=9300, workers=2):
         # TODO log everything, filter display to relevant
         print(line.rstrip())
 
+    if socket:
+        binding = f"unix:{socket}"
+    else:
+        binding = f"0.0.0.0:{port}"
     proc = sh.gunicorn(
         wsgi_app,
-        bind=f"0.0.0.0:{port}",
+        bind=binding,
         worker_class="gevent",
         workers=workers,
         _bg=True,
@@ -446,10 +499,11 @@ class Form(dict):
             else:
                 if getattr(_data[key], "filename", False):
                     value = File(key, _data[key])
-                try:
-                    value = _data.getfirst(key)
-                except AttributeError:
-                    value = _data[key]
+                else:
+                    try:
+                        value = _data.getfirst(key)
+                    except AttributeError:
+                        value = _data[key]
                 if isinstance(defaults.get(key), list):
                     value = [value]
                 self[key] = value
@@ -475,8 +529,10 @@ class File:
         self.name = name
         self.fileobj = fileobj
 
-    def save(self, filepath, **options):
+    def save(self, filepath=None, **options):
         """ """
+        if filepath is None:
+            filepath = self.fileobj.filename
         filepath = pathlib.Path(filepath)
         # TODO handle required
         required = options.pop("required", False)
@@ -565,6 +621,9 @@ class Resource:
                 pass
         return content
 
+    # XXX def __getattr__(self, name):
+    # XXX     pass  # TODO FIXME shuts up the linter on `self.{path_template}`
+
     def __contains__(self, item):
         return item in dir(self)
 
@@ -574,48 +633,6 @@ class Resource:
 # XXX     def __missing__(self, key):
 # XXX         self[key] = collections.OrderedDict()
 # XXX         return self[key]
-
-
-def add_job_tables(sqldb):
-    """"""
-    sqldb.define(
-        "job_signatures",
-        module="TEXT",
-        object="TEXT",
-        args="BLOB",
-        kwargs="BLOB",
-        arghash="TEXT",
-        unique=("module", "object", "arghash"),
-    )
-    sqldb.define(
-        "job_runs",
-        job_signature_id="INTEGER",
-        job_id="TEXT UNIQUE",
-        created="DATETIME NOT NULL " "DEFAULT(STRFTIME('%Y-%m-%d %H:%M:%f', 'NOW'))",
-        started="DATETIME",
-        finished="DATETIME",
-        start_time="REAL",
-        run_time="REAL",
-        status="INTEGER",
-        output="TEXT",
-    )
-    sqldb.define(
-        "job_schedules",
-        job_signature_id="INTEGER",
-        minute="TEXT",
-        hour="TEXT",
-        day_of_month="TEXT",
-        month="TEXT",
-        day_of_week="TEXT",
-        unique=(
-            "job_signature_id",
-            "minute",
-            "hour",
-            "day_of_month",
-            "month",
-            "day_of_week",
-        ),
-    )
 
 
 class Application:
@@ -642,7 +659,7 @@ class Application:
     def __init__(
         self,
         name,
-        db=True,
+        db=False,
         static=None,
         icon=None,
         sessions=False,
@@ -675,9 +692,6 @@ class Application:
         if static:
             static_path = pkg_resources.resource_filename(static, "static")
             self.static_path = pathlib.Path(static_path)
-        if sessions:  # TODO XXX isn't working in this wrap-order
-            self.db.define("sessions", **session_table_sql)
-            self.wrap(resume_session, "pre")
         # for method in http.spec.request.methods[:5]:
         #     setattr(self, method, functools.partial(self.get_handler,
         #                                             method=method))
@@ -829,11 +843,11 @@ class Application:
             asset_path = path.partition("/")[2]
             if asset_path.startswith((".", "/")):
                 raise BadRequest("bad filename")
-            asset = self.static_path / asset_path
             try:
+                asset = self.static_path / asset_path
                 with asset.open("rb") as fp:
                     content = fp.read()
-            except FileNotFoundError:
+            except (AttributeError, FileNotFoundError):
                 asset = pathlib.Path(__file__).parent / "static" / asset_path
                 try:
                     with asset.open("rb") as fp:
@@ -844,7 +858,12 @@ class Application:
                 ".css": "text/css",
                 ".js": "application/javascript",
                 ".gif": "image/gif",
+                ".jpg": "image/jpeg",
                 ".svg": "image/svg+xml",
+                ".aiff": "audio/aiff",
+                ".mp3": "audio/mpeg",
+                ".woff": "font/woff",
+                ".woff2": "font/woff2",
             }
             # tx.response.headers.content_type = content_types[asset.suffix]
             header("Content-Type", content_types[asset.suffix])
@@ -1003,18 +1022,9 @@ class Application:
     #     return handler()
 
     def get_controller(self, path):
-        """ """
         # TODO softcode `static/` reference
         if path.endswith("/") and not path.startswith("static/"):
             raise PermanentRedirect("/" + path.rstrip("/"))
-
-        for mount, app in self.mounts:
-            m = re.match(mount, path)
-            if m:
-                controller = app.get_controller(path[m.span()[1] :].lstrip("/"))
-                for k, v in m.groupdict().items():
-                    setattr(controller, k, v)
-                return controller
 
         class ResourceNotFound(Resource):
             def get(inner_self):
@@ -1043,7 +1053,16 @@ class Application:
             if match
             else {}
         )
-        return resource(**unquoted)
+        if match:
+            return resource(**unquoted)
+
+        for mount, app in self.mounts:
+            m = re.match(mount, path)
+            if m:
+                controller = app.get_controller(path[m.span()[1] :].lstrip("/"))
+                for k, v in m.groupdict().items():
+                    setattr(controller, k, v)
+                return controller
 
     def get_handler(self, controller, method="get"):
         method = method.lower()
@@ -1107,9 +1126,9 @@ def sessions(**defaults):  # TODO XXX
     return hook
 
 
-data_app = application("Data", db=False, mount_prefix="data", table=r"\w+")
-debug_app = application("Debug", db=False, mount_prefix="debug")
-icons_app = application("Icon", db=False, mount_prefix="icons")
+data_app = application("Data", mount_prefix="data", table=r"\w+")
+debug_app = application("Debug", mount_prefix="debug")
+icons_app = application("Icon", mount_prefix="icons")
 
 
 @data_app.route(r"sql")
@@ -1169,18 +1188,9 @@ class Icon:
             return payload
 
 
-session_table_sql = dict(
-    timestamp="DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP",
-    identifier="TEXT NOT NULL UNIQUE",
-    data="TEXT NOT NULL",
-)
-
-
 def resume_session(handler, app):
     """."""
     # TODO monitor expiration (default_session_timeout)
-    tx.db.define("sessions", **session_table_sql)
-    add_job_tables(tx.db)
     data = {}
     try:
         identifier = tx.request.headers["cookie"].morsels["session"]

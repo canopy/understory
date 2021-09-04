@@ -13,6 +13,20 @@ main = term.application("web", web.__doc__)
 
 
 @main.register()
+class Apps:
+    """Serve a web app."""
+
+    def setup(self, add_arg):
+        pass
+
+    def run(self, stdin, log):
+        for pkg, apps in web.get_apps().items():
+            for name, _, ns, obj in apps:
+                print(f"{name} {ns}:{obj[0]}")
+        return 0
+
+
+@main.register()
 class Serve:
     """Serve a web app."""
 

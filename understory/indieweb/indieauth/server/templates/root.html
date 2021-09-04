@@ -1,4 +1,4 @@
-$def with (owner, clients, users)
+$def with (owner, clients)
 $var title: Auth
 
 $if tx.user.session:
@@ -11,15 +11,16 @@ $if tx.user.session:
         </form>
 
         <h2>People</h2>
-        <h3>Reciprocal</h3>
-        $ reciprocals = []
-        <ul>
-        $for client in clients:
-            $for user in users:
-                $if client["client_id"] == user["url"]:
-                    <li>$user["name"] $user["url"]</li>
-                    $reciprocals.append(user["url"])
-        </ul>
+        $# <h3>Reciprocal</h3>
+        $# $ reciprocals = []
+        $# <ul>
+        $# $for client in clients:
+        $#     $for user in users:
+        $#         $if client["client_id"] == user["url"]:
+        $#             <li>$user["name"] $user["url"]</li>
+        $#             $reciprocals.append(user["url"])
+        $# </ul>
+
         <h3>Who You've Visited</h3>
         <p>personal websites that you've signed into</p>
         <ul>
@@ -58,9 +59,9 @@ $else:
     <button>Sign In</button>
     </form>
 
-    <h2>Visitor</h2>
-    <form action=/auth/users/sign-in>
-    <div><label>Website address<br>
-    <input type=text name=me></label></div>
-    <button>Sign In</button>
-    </form>
+    $# <h2>Visitor</h2>
+    $# <form action=/auth/users/sign-in>
+    $# <div><label>Website address<br>
+    $# <input type=text name=me></label></div>
+    $# <button>Sign In</button>
+    $# </form>

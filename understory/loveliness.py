@@ -23,7 +23,7 @@ from understory.web import tx
 
 main = term.application("loveliness", "job queue")
 queue = gevent.queue.PriorityQueue()
-worker_count = 20
+worker_count = 5
 
 
 def run_scheduler():  # browser):
@@ -160,7 +160,7 @@ class Serve:
 
     def run(self, stdin, log):
         """Spawn a scheduler and workers and start sending jobs to them."""
-        serve(p.stem for p in pathlib.Path().glob("*.db"))
+        serve(p.stem for p in pathlib.Path().glob("site-*.db"))
 
 
 if __name__ == "__main__":

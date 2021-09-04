@@ -1,10 +1,36 @@
-"""WebSub hub, bub."""
+"""
+WebSub publisher and subscriber implementations.
 
-from understory import web
+> WebSub provides a common mechanism for communication between publishers
+> of any kind of Web content and their subscribers, based on HTTP web hooks.
+> Subscription requests are relayed through hubs, which validate and verify
+> the request. Hubs then distribute new and updated content to subscribers
+> when it becomes available. WebSub was previously known as PubSubHubbub. [0]
+
+[0]: https://w3.org/TR/websub
+
+"""
+
+from understory import sql, web
 from understory.web import tx
 
+publisher_app = web.application(
+    "WebSubPublisher", mount_prefix="pub/subscribers", subscription_id=r".+"
+)
+publisher_model = sql.model(
+    "WebSubPublisher",
+    0,
+    followers={
+        "followed": "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP",
+        "topic_url": "TEXT",
+        "callback_url": "TEXT",
+    },
+)
 
-hub = web.application("WebSubHub", mount_prefix="hub", db=False, subscription_id=r".+")
+subscriber_app = web.application(
+    "WebSubSubscriber", mount_prefix="sub/subscriptions", subscription_id=r".+"
+)
+
 templates = web.templates(__name__)
 subscription_lease = 60 * 60 * 24 * 90
 
@@ -49,14 +75,8 @@ def verify_subscription(topic_url, callback_url):
     )
 
 
-def wrap(handler, app):
+def wrap_publisher(handler, app):
     """Ensure server links are in head of root document."""
-    tx.db.define(
-        "followers",
-        followed="DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP",
-        topic_url="TEXT",
-        callback_url="TEXT",
-    )
     yield
     # TODO limit to subscribables
     if tx.request.uri.path == "" and tx.response.body:
@@ -73,7 +93,7 @@ def wrap(handler, app):
         web.header("Link", '</hub>; rel="hub"', add=True)
 
 
-@hub.route(r"")
+@publisher_app.route(r"")
 class Hub:
     """."""
 
@@ -92,7 +112,7 @@ class Hub:
         raise web.Accepted("subscription request accepted")
 
 
-@hub.route(r"{subscription_id}")
+@subscriber_app.route(r"{subscription_id}")
 class Subscription:
     """."""
 
@@ -103,6 +123,6 @@ class Subscription:
         return form["hub.challenge"]
 
     def post(self):
-        """Check feed for updates."""
+        """Check feed for updates (or store the fat ping)."""
         print(tx.request.body._data)
         return

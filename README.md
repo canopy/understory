@@ -1,7 +1,11 @@
-# understory
-Tools to power your personal website
+    ██╗   ██╗███╗   ██╗██████╗ ███████╗██████╗ ███████╗████████╗ ██████╗ ██████╗ ██╗   ██╗
+    ██║   ██║████╗  ██║██╔══██╗██╔════╝██╔══██╗██╔════╝╚══██╔══╝██╔═══██╗██╔══██╗╚██╗ ██╔╝
+    ██║   ██║██╔██╗ ██║██║  ██║█████╗  ██████╔╝███████╗   ██║   ██║   ██║██████╔╝ ╚████╔╝
+    ██║   ██║██║╚██╗██║██║  ██║██╔══╝  ██╔══██╗╚════██║   ██║   ██║   ██║██╔══██╗  ╚██╔╝
+    ╚██████╔╝██║ ╚████║██████╔╝███████╗██║  ██║███████║   ██║   ╚██████╔╝██║  ██║   ██║
+     ╚═════╝ ╚═╝  ╚═══╝╚═════╝ ╚══════╝╚═╝  ╚═╝╚══════╝   ╚═╝    ╚═════╝ ╚═╝  ╚═╝   ╚═╝
 
-## An IndieWeb-compatible personal website packaged and deployed
+## An IndieWeb-compatible personal website
 
 Install [Poetry](https://python-poetry.org).
 
@@ -18,16 +22,15 @@ Initialize your project and add understory as a dependency.
 Create a file `site.py`:
 
     from understory import indieweb
-    
-    app = indieweb.site()
+    app = indieweb.personal_site(__name__)
 
-Add your site's app as an entry point in your `pyproject.toml`:
+<!--Add your site's app as an entry point in your `pyproject.toml`:
 
-    poetry run web install site:app AliceAnderson
+    poetry run web install site:app AliceAnderson-->
 
 Serve your website locally in development mode:
 
-    poetry run web serve AliceAnderson
+    poetry run web serve site:app
 
 Open <a href=http://localhost:9000>localhost:9000</a> in your browser.
 
@@ -45,11 +48,4 @@ To publish:
 
 To deploy:
 
-    poetry run web deploy
-
-    ██╗   ██╗███╗   ██╗██████╗ ███████╗██████╗ ███████╗████████╗ ██████╗ ██████╗ ██╗   ██╗
-    ██║   ██║████╗  ██║██╔══██╗██╔════╝██╔══██╗██╔════╝╚══██╔══╝██╔═══██╗██╔══██╗╚██╗ ██╔╝
-    ██║   ██║██╔██╗ ██║██║  ██║█████╗  ██████╔╝███████╗   ██║   ██║   ██║██████╔╝ ╚████╔╝
-    ██║   ██║██║╚██╗██║██║  ██║██╔══╝  ██╔══██╗╚════██║   ██║   ██║   ██║██╔══██╗  ╚██╔╝
-    ╚██████╔╝██║ ╚████║██████╔╝███████╗██║  ██║███████║   ██║   ╚██████╔╝██║  ██║   ██║
-     ╚═════╝ ╚═╝  ╚═══╝╚═════╝ ╚══════╝╚═╝  ╚═╝╚══════╝   ╚═╝    ╚═════╝ ╚═╝  ╚═╝   ╚═╝
+    poetry run gaea deploy site:app alice.anderson.example
