@@ -1,0 +1,2 @@
+[flake8]
+ignore = E402  # gevent.monkey.patch_all()
