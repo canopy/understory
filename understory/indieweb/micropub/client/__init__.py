@@ -2,25 +2,22 @@
 
 from understory import web
 
-__all__ = ["app"]
-
-app = web.application("MicropubEditors", mount_prefix="editors")
-templates = web.templates(__name__)
+app = web.application(__name__, prefix="editors")
 
 
-@app.route(r"text")
+@app.control(r"text")
 class TextEditor:
     """A text editor for notes and articles."""
 
     def get(self):
         """Render the editor."""
-        return templates.text()
+        return app.views.text()
 
 
-@app.route(r"image")
+@app.control(r"image")
 class ImageEditor:
     """An image editor for photos and graphics."""
 
     def get(self):
         """Render the editor."""
-        return templates.image()
+        return app.views.image()

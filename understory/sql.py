@@ -98,18 +98,21 @@ def from_json(val):
 
 
 class Model:
-    def __init__(self, name, version, **schemas):
+    def __init__(self, name, **schemas):
         self.name = name
-        self.version = version
         self.schemas = schemas
+        self.version = 0
         self.migrations = {}
 
     def __call__(self, version):
-        def migration(f):
+        if version > self.version:
+            self.version = version
+
+        def add_migration(f):
             self.migrations[version] = f
             return f
 
-        return migration
+        return add_migration
 
 
 model = Model
@@ -318,6 +321,7 @@ def db(path, *models) -> Database:
             current_models[model.name] = model.version
             continue
         if current_version == model.version:
+            # TODO check schema in code against schema in db, suggest migration
             continue  # model exists and is up-to-date
         elif current_version > model.version:
             raise Exception("Your database version is ahead of your software version.")

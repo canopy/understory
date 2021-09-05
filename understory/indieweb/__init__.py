@@ -10,16 +10,18 @@ from .indieauth.server import get_card
 
 __all__ = ["personal_site"]
 
-about = web.application("About", mount_prefix="about")
-people = web.application("People", mount_prefix="people")
-cache = web.application("Cache", mount_prefix="cache", resource=r".+")
+about = web.application("About", prefix="about")
+people = web.application("People", prefix="people")
+cache = web.application("Cache", prefix="cache", args={"resource": r".+"})
 content = web.application(
     "Content",
-    year=r"\d{4}",
-    month=r"\d{2}",
-    day=r"\d{2}",
-    post=web.nb60_re + r"{,4}",
-    slug=r"[\w_-]+",
+    args={
+        "year": r"\d{4}",
+        "month": r"\d{2}",
+        "day": r"\d{2}",
+        "post": web.nb60_re + r"{,4}",
+        "slug": r"[\w_-]+",
+    },
 )
 templates = mm.templates(__name__)
 
@@ -30,12 +32,12 @@ def personal_site(name: str, host: str = None, port: int = None) -> web.Applicat
         web.cache.model,
         web.framework.sessions_model,
         web.framework.jobs_model,
-        indieauth.server.model,
-        indieauth.client.model,
-        websub.publisher_model,
-        micropub.server.model,
-        microsub.server.model,
-        webmention.model,
+        indieauth.server.app.model,
+        indieauth.client.app.model,
+        websub.publisher.app.model,
+        micropub.server.app.model,
+        microsub.server.app.model,
+        webmention.app.model,
     ]
     for site_db in pathlib.Path().glob("site-*.db"):
         sql.db(site_db, *models)
@@ -69,14 +71,14 @@ def personal_site(name: str, host: str = None, port: int = None) -> web.Applicat
             web.debug_app,
             indieauth.server.app,
             indieauth.client.app,
-            websub.publisher_app,  # websub must come before micropub/microsub
-            websub.subscriber_app,
+            websub.publisher.app,  # websub must come before micropub/microsub
+            websub.subscriber.app,
             micropub.server.app,
             micropub.client.app,
             microsub.server.app,
             microsub.client.app,
             webmention.app,
-            content,  # has no mount_prefix, must remain last
+            content,  # has no prefix, must remain last
         ),
         wrappers=(
             set_data_sources,
@@ -86,12 +88,12 @@ def personal_site(name: str, host: str = None, port: int = None) -> web.Applicat
             indieauth.server.wrap,
             indieauth.client.wrap,
             webmention.wrap,
-            websub.wrap_publisher,
+            websub.publisher.wrap,
         ),
     )
 
 
-@about.route(r"")
+@about.control(r"")
 class About:
     """"""
 
@@ -99,7 +101,7 @@ class About:
         return templates.about.index(get_card(), tx.pub.get_posts())
 
 
-@about.route(r"editor")
+@about.control(r"editor")
 class AboutEditor:
     """"""
 
@@ -159,7 +161,7 @@ class AboutEditor:
         tx.db.update("identities", resume=resume)
 
 
-@people.route(r"")
+@people.control(r"")
 class People:
     def get(self):
         return templates.people.index(
@@ -167,13 +169,13 @@ class People:
         )
 
 
-@cache.route(r"")
+@cache.control(r"")
 class Cache:
     def get(self):
         return templates.cache.index(tx.db.select("cache"))
 
 
-@cache.route(r"{resource}")
+@cache.control(r"{resource}")
 class Resource:
     """"""
 
@@ -188,7 +190,7 @@ class Resource:
         return templates.cache.resource(resource)
 
 
-@content.route(r"")
+@content.control(r"")
 class Homepage:
     """Your name, avatar and one or more streams of posts."""
 
@@ -204,7 +206,7 @@ class Homepage:
         )
 
 
-@content.route(r"{year}/{month}/{day}/{post}(/{slug})?")
+@content.control(r"{year}/{month}/{day}/{post}(/{slug})?")
 class Permalink:
     """An individual entry."""
 

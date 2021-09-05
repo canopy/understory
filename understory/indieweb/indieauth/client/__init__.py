@@ -3,22 +3,22 @@
 import base64
 import hashlib
 
-from understory import sql, web
+from understory import web
 from understory.web import tx, uri
 
-app = web.application("IndieAuthClient", mount_prefix="access")
-model = sql.model(
-    "IndieAuthClient",
-    0,
-    users={
-        "url": "TEXT",
-        "name": "TEXT",
-        "email": "TEXT",
-        "access_token": "TEXT",
-        "account_created": "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP",
+app = web.application(
+    __name__,
+    prefix="access",
+    model={
+        "users": {
+            "url": "TEXT",
+            "name": "TEXT",
+            "email": "TEXT",
+            "access_token": "TEXT",
+            "account_created": "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP",
+        },
     },
 )
-templates = web.templates(__name__)
 
 
 def sign_in(site: uri, user: uri) -> uri:
@@ -38,21 +38,21 @@ def get_users():
     return list(tx.db.select("users"))
 
 
-def wrap(handler, app):
+def wrap(handler, mainapp):
     """Ensure client database contains users table."""
     # TODO store User Agent and IP address
     yield
 
 
-@app.route(r"")
+@app.control(r"")
 class Users:
     """."""
 
     def get(self):
-        return templates.users(get_users())
+        return app.views.users(get_users())
 
 
-@app.route(r"sign-in")
+@app.control(r"sign-in")
 class SignIn:
     """IndieAuth client sign in."""
 
@@ -60,7 +60,7 @@ class SignIn:
         try:
             form = web.form("me", return_to="/")
         except web.BadRequest:
-            return templates.signin(tx.host.name)
+            return app.views.signin(tx.host.name)
         # XXX try:
         # XXX     rels = tx.cache[form.me].mf2json["rels"]
         # XXX except web.ConnectionError:
@@ -96,7 +96,7 @@ class SignIn:
         raise web.SeeOther(auth_endpoint)
 
 
-@app.route(r"authorize")
+@app.control(r"authorize")
 class Authorize:
     """IndieAuth client authorization."""
 
@@ -128,12 +128,12 @@ class Authorize:
         raise web.SeeOther(tx.user.session["return_to"])
 
 
-@app.route(r"sign-out")
+@app.control(r"sign-out")
 class SignOut:
     """IndieAuth client sign out."""
 
     def get(self):
-        return templates.signout()
+        return app.views.signout()
 
     def post(self):
         access_token = tx.db.select(

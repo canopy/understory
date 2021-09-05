@@ -5,35 +5,38 @@ from __future__ import annotations
 import base64
 import hashlib
 
-from understory import sql, web
+from understory import web
 from understory.web import tx
 
-app = web.application("IndieAuthServer", mount_prefix="auth", client_id=r"[\w/.]+")
-model = sql.model(
-    "IndieAuthServer",
-    0,
-    auths={
-        "auth_id": "TEXT",
-        "initiated": "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP",
-        "revoked": "DATETIME",
-        "code": "TEXT",
-        "client_id": "TEXT",
-        "client_name": "TEXT",
-        "code_challenge": "TEXT",
-        "code_challenge_method": "TEXT",
-        "redirect_uri": "TEXT",
-        "response": "JSON",
-        "token": "TEXT",
+app = web.application(
+    __name__,
+    prefix="auth",
+    args={
+        "client_id": r"[\w/.]+",
     },
-    credentials={
-        "created": "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP",
-        "salt": "BLOB",
-        "scrypt_hash": "BLOB",
+    model={
+        "auths": {
+            "auth_id": "TEXT",
+            "initiated": "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP",
+            "revoked": "DATETIME",
+            "code": "TEXT",
+            "client_id": "TEXT",
+            "client_name": "TEXT",
+            "code_challenge": "TEXT",
+            "code_challenge_method": "TEXT",
+            "redirect_uri": "TEXT",
+            "response": "JSON",
+            "token": "TEXT",
+        },
+        "credentials": {
+            "created": "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP",
+            "salt": "BLOB",
+            "scrypt_hash": "BLOB",
+        },
     },
 )
-templates = web.templates(__name__)
 
-supported_scopes = [
+supported_scopes = (
     "create",
     "draft",
     "update",
@@ -41,7 +44,7 @@ supported_scopes = [
     "media",
     "profile",
     "email",
-]
+)
 
 
 def get_card() -> dict | None:
@@ -133,16 +136,16 @@ def get_revoked():
     return list(tx.db.select("auths", where="revoked not null"))
 
 
-def wrap(handler, app):
+def wrap(handler, mainapp):
     """Ensure server links are in head of root document."""
     tx.host.owner = get_card()
     if not tx.host.owner:
         web.header("Content-Type", "text/html")
         if tx.request.method == "GET":
-            raise web.OK(templates.claim())
+            raise web.OK(app.view.claim())
         elif tx.request.method == "POST":
             uid, passphrase = init_owner(web.form("name").name)
-            raise web.Created(templates.claimed(uid, " ".join(passphrase)), uid)
+            raise web.Created(app.view.claimed(uid, " ".join(passphrase)), uid)
     try:
         tx.user.is_owner = tx.user.session["uid"] == tx.host.owner["uid"][0]
     except (AttributeError, KeyError, IndexError):
@@ -161,7 +164,7 @@ def wrap(handler, app):
     #     and not tx.user.is_owner
     #     and not tx.request.headers.get("Authorization")
     # ):  # TODO validate token
-    #     raise web.Unauthorized(templates.unauthorized())
+    #     raise web.Unauthorized(app.view.unauthorized())
     yield
     if tx.request.uri.path == "" and tx.response.body:
         doc = web.parse(tx.response.body)
@@ -182,14 +185,14 @@ def wrap(handler, app):
         web.header("Link", f'<{base}/tickets>; rel="ticket_endpoint"', add=True)
 
 
-@app.route(r"")
+@app.control(r"")
 class AuthorizationEndpoint:
     """IndieAuth server `authorization endpoint`."""
 
     def get(self):
         """Return a consent screen for a third-party site sign-in."""
         if not tx.user.is_owner:
-            raise web.OK(templates.root(get_card(), get_clients()))
+            raise web.OK(app.view.root(get_card(), get_clients()))
         try:
             form = web.form(
                 "response_type",
@@ -199,7 +202,7 @@ class AuthorizationEndpoint:
                 scope=[],
             )
         except web.BadRequest:
-            return templates.authorizations(get_clients(), get_active(), get_revoked())
+            return app.view.authorizations(get_clients(), get_active(), get_revoked())
         if form.response_type not in (
             "code",
             "id",  # XXX treat the same as "code" for backwards-compatibility
@@ -221,7 +224,7 @@ class AuthorizationEndpoint:
                 code_challenge=code_details.code_challenge,
                 code_challenge_method=code_details.code_challenge_method,
             )
-        return templates.signin(client, developer, form.scope, supported_scopes)
+        return app.view.signin(client, developer, form.scope, supported_scopes)
 
     def post(self):
         """Handle "Profile URL" flow response."""
@@ -229,7 +232,7 @@ class AuthorizationEndpoint:
         complete_redemption(auth_response)
 
 
-@app.route(r"consent")
+@app.control(r"consent")
 class AuthorizationConsent:
     """The authorization consent screen."""
 
@@ -261,7 +264,7 @@ class AuthorizationConsent:
         raise web.Found(redirect_uri)
 
 
-@app.route(r"tokens")
+@app.control(r"tokens")
 class TokenEndpoint:
     """A token endpoint."""
 
@@ -337,7 +340,7 @@ def redeem_authorization_code():
     return auth["response"], complete_redemption
 
 
-@app.route(r"tickets")
+@app.control(r"tickets")
 class TicketEndpoint:
     """A ticket endpoint."""
 
@@ -347,7 +350,7 @@ class TicketEndpoint:
         )
 
 
-@app.route(r"clients")
+@app.control(r"clients")
 class Clients:
     """Authorized clients."""
 
@@ -355,10 +358,10 @@ class Clients:
         clients = tx.db.select(
             "auths", what="DISTINCT client_id, client_name", order="client_name ASC"
         )
-        return templates.clients(clients)
+        return app.view.clients(clients)
 
 
-@app.route(r"clients/{client_id}")
+@app.control(r"clients/{client_id}")
 class Client(web.Resource):
     """An authorized client."""
 
@@ -369,10 +372,10 @@ class Client(web.Resource):
             vals=[f"https://{self.client_id}"],
             order="redirect_uri, initiated DESC",
         )
-        return templates.client(auths)
+        return app.view.client(auths)
 
 
-@app.route(r"sign-in")
+@app.control(r"sign-in")
 class SignIn:
     """Sign in as the owner of the site."""
 
@@ -389,14 +392,14 @@ class SignIn:
         raise web.Unauthorized("bad passphrase")
 
 
-@app.route(r"sign-out")
+@app.control(r"sign-out")
 class SignOut:
     """Sign out as the owner of the site."""
 
     def get(self):
         if not tx.user.is_owner:
             raise web.Unauthorized("must be owner")
-        return templates.signout()
+        return app.view.signout()
 
     def post(self):
         if not tx.user.is_owner:
@@ -406,6 +409,6 @@ class SignOut:
         raise web.SeeOther(f"/{return_to}")
 
 
-@model(1)
-def change_name(db):
-    db.rename_column("auths", "revoked", "revoced")
+# @app.migrate(1)
+# def change_name(db):
+#     db.rename_column("auths", "revoked", "revoced")

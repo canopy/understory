@@ -142,7 +142,6 @@ def delete(url, **kwargs):
 class Cache:
     model = sql.model(
         "WebCache",
-        0,
         cache={
             "url": "TEXT UNIQUE",
             "html": "TEXT",

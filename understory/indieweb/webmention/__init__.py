@@ -9,22 +9,24 @@ Webmention sender and receiver implementations.
 
 """
 
-# TODO salmention
-# TODO vouch
+# TODO https://indieweb.org/Salmention
+# TODO https://indieweb.org/Vouch
 
-from understory import sql, web
+from understory import web
 from understory.web import tx
 
-app = web.application("Webmention", mount_prefix="mentions", mention_id=r"\w+")
-model = sql.model(
-    "Webmention",
-    0,
-    mentions={
-        "received": "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP",
-        "mention_id": "TEXT",
-        "data": "JSON",
-        "source": "TEXT",
-        "target": "TEXT",
+app = web.application(
+    __name__,
+    prefix="mentions",
+    args={"mention_id": r"\w+"},
+    model={
+        "mentions": {
+            "received": "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP",
+            "mention_id": "TEXT",
+            "data": "JSON",
+            "source": "TEXT",
+            "target": "TEXT",
+        }
     },
 )
 templates = web.templates(__name__)
@@ -209,7 +211,7 @@ def get_mentions(path):
     return tx.db.select("mentions", where="target = ?", vals=[path])
 
 
-@app.route(r"")
+@app.control(r"")
 class Mentions:
     """."""
 
@@ -222,7 +224,7 @@ class Mentions:
         raise web.Accepted("webmention received")
 
 
-@app.route(r"{mention_id}")
+@app.control(r"{mention_id}")
 class Mention:
     """."""
 

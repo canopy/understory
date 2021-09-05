@@ -21,20 +21,20 @@ $for prefix, subapp in app.mounts:
             <li>$wrapper</li>
 </ul>
 
-<h2>Routes</h2>
+<h2>Controllers</h2>
 <ul>
-$for route, _ in app.routes:
-    <li>$route</li>
+$for route, controller in app.controllers:
+    <li>$route, $controller</li>
 </ul>
 
 <h2>Mounts</h2>
 <ul id=mounts>
 $for prefix, subapp in app.mounts:
     $ prefix = f"/{prefix}/".rstrip("/")
-    $if subapp.routes:
-        $for route, _ in subapp.routes:
+    $if subapp.controllers:
+        $for route, controller in subapp.controllers:
             <li>$(f"{prefix}/{route}".rstrip("/"))
-            <small><a href=https://understory.stream/api/$("/".join(_.handler.__module__.split(".")))#$_.handler.__name__>$_.handler.__name__</a></small></li>
+            <small><a href=https://understory.stream/api/$("/".join(controller.handler.__module__.split(".")))#$controller.handler.__name__>$controller.handler.__name__</a></small></li>
 </ul>
 
 <style>

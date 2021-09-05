@@ -1,21 +1,22 @@
 """A Microsub server."""
 
-from understory import sql, web
-from understory.indieweb import websub
+from understory import web
 from understory.web import tx
 
-app = web.application("MicrosubServer", mount_prefix="sub")
-model = sql.model(
-    "MicrosubServer",
-    0,
-    following={
-        "feed_id": "TEXT UNIQUE",
-        "url": "TEXT",
-        "callback_url": "TEXT",
-        "added": "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP",
+from ... import websub
+
+app = web.application(
+    __name__,
+    prefix="sub",
+    model={
+        "following": {
+            "feed_id": "TEXT UNIQUE",
+            "url": "TEXT",
+            "callback_url": "TEXT",
+            "added": "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP",
+        }
     },
 )
-templates = web.templates(__name__)
 
 
 def wrap(handler, app):
@@ -101,7 +102,7 @@ class LocalClient:
         feed_id = web.nbrandom(9)
         callback_url = f"{tx.origin}/hub/{feed_id}"
         tx.db.insert("following", url=url, feed_id=feed_id, callback_url=callback_url)
-        web.enqueue(websub.subscribe, url, callback_url)
+        web.enqueue(websub.subscriber.subscribe, url, callback_url)
 
     @property
     def following(self):
@@ -109,7 +110,7 @@ class LocalClient:
         return [{"type": "feed", "url": f["url"]} for f in tx.db.select("following")]
 
 
-@app.route(r"")
+@app.control(r"")
 class MicrosubEndpoint:
     """A Microsub endpoint."""
 
@@ -118,7 +119,7 @@ class MicrosubEndpoint:
         try:
             form = web.form("action", channel="default")
         except web.BadRequest:
-            return templates.activity(tx.sub.following)
+            return app.views.activity(tx.sub.following)
         if form.action == "follow":
             response = {"items": tx.sub.following}
         elif form.action == "timeline":
@@ -154,21 +155,21 @@ class MicrosubEndpoint:
         return response
 
 
-@app.route(r"search")
+@app.control(r"search")
 class MicrosubServerSearch:
     """."""
 
     def get(self):
         """Return search results for given `q`."""
         form = web.form("q")
-        return templates.search(form.q, tx.sub.search(form.q))
+        return app.views.search(form.q, tx.sub.search(form.q))
 
 
-@app.route(r"preview")
+@app.control(r"preview")
 class MicrosubServerPreview:
     """."""
 
     def get(self):
         """Return a preview of given `url`."""
         form = web.form("url")
-        return templates.preview(form.url, tx.sub.preview(form.url))
+        return app.views.preview(form.url, tx.sub.preview(form.url))

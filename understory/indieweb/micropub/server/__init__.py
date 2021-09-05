@@ -6,14 +6,12 @@ import random
 import pendulum
 import sh
 import vobject
-from understory import sql, web
+from understory import web
 from understory.indieweb.util import discover_post_type
 from understory.web import tx
 
 from ... import webmention
 from .. import util
-
-__all__ = ["app"]
 
 
 class PostNotFoundError(Exception):
@@ -21,30 +19,29 @@ class PostNotFoundError(Exception):
 
 
 app = web.application(
-    "MicropubServer",
-    mount_prefix="pub",
-    channel=r".+",
-    entry=r".+",
-    nickname=r"[A-Za-z0-9-]+",
-    filename=rf"{web.nb60_re}{{4}}.\w{{1,10}}",
-)
-model = sql.model(
-    "MicropubServer",
-    0,
-    resources={
-        "permalink": "TEXT UNIQUE",
-        "version": "TEXT UNIQUE",
-        "resource": "JSON",
+    __name__,
+    prefix="pub",
+    args={
+        "channel": r".+",
+        "entry": r".+",
+        "nickname": r"[A-Za-z0-9-]+",
+        "filename": rf"{web.nb60_re}{{4}}.\w{{1,10}}",
     },
-    deleted_resources={
-        "permalink": "TEXT UNIQUE",
-        "version": "TEXT UNIQUE",
-        "resource": "JSON",
+    model={
+        "resources": {
+            "permalink": "TEXT UNIQUE",
+            "version": "TEXT UNIQUE",
+            "resource": "JSON",
+        },
+        "deleted_resources": {
+            "permalink": "TEXT UNIQUE",
+            "version": "TEXT UNIQUE",
+            "resource": "JSON",
+        },
+        "media": {"mid": "TEXT", "sha256": "TEXT UNIQUE", "size": "INTEGER"},
+        "syndication": {"destination": "JSON NOT NULL"},
     },
-    media={"mid": "TEXT", "sha256": "TEXT UNIQUE", "size": "INTEGER"},
-    syndication={"destination": "JSON NOT NULL"},
 )
-templates = web.templates(__name__)
 
 # TODO supported_types = {"RSVP": ["in-reply-to", "rsvp"]}
 
@@ -84,7 +81,7 @@ def route_unrouted(handler, app):
         if channel["resource"]["url"][0] == f"/{tx.request.uri.path}":
             posts = tx.pub.get_posts_by_channel(channel["resource"]["uid"][0])
             web.header("Content-Type", "text/html")
-            raise web.OK(templates.channel(channel, posts))
+            raise web.OK(app.views.channel(channel, posts))
     yield
 
 
@@ -474,7 +471,7 @@ class LocalClient:
         return pathlib.Path(tx.host.name) / filename
 
 
-@app.route(r"")
+@app.control(r"")
 class MicropubEndpoint:
     """."""
 
@@ -490,7 +487,7 @@ class MicropubEndpoint:
             reviews = []  # local_client.get_reviews()
             rooms = local_client.get_rooms()
             media = local_client.get_media()
-            return templates.activity(
+            return app.views.activity(
                 channels, entries, cards, events, reviews, rooms, media
             )
 
@@ -566,31 +563,31 @@ class MicropubEndpoint:
             pass
 
 
-@app.route(r"channels")
+@app.control(r"channels")
 class Channels:
     """All channels."""
 
     def get(self):
-        return templates.channels(LocalClient().get_channels())
+        return app.views.channels(LocalClient().get_channels())
 
 
-@app.route(r"channels/{channel}")
+@app.control(r"channels/{channel}")
 class Channel:
     """A single channel."""
 
     def get(self):
-        return templates.channel(self.channel)
+        return app.views.channel(self.channel)
 
 
-@app.route(r"entries")
+@app.control(r"entries")
 class Entries:
     """All entries on file."""
 
     def get(self):
-        return templates.entries(LocalClient().get_entries(), templates.render_dict)
+        return app.views.entries(LocalClient().get_entries(), app.views.render_dict)
 
 
-@app.route(r"entries/{entry}")
+@app.control(r"entries/{entry}")
 class Entry:
     """A single entry on file."""
 
@@ -603,10 +600,10 @@ class Entry:
             resource = tx.db.select(
                 "cache", where="url = ?", vals=[f"http://{self.resource}"]
             )[0]
-        return templates.cache_resource(resource)
+        return app.views.cache_resource(resource)
 
 
-@app.route(r"cards")
+@app.control(r"cards")
 class Cards:
     """
     All cards on file.
@@ -616,7 +613,7 @@ class Cards:
     """
 
     def get(self):
-        return templates.cards(tx.pub.get_cards(), templates.render_dict)
+        return app.views.cards(tx.pub.get_cards(), app.views.render_dict)
 
     def options(self):
         """Signal capabilities to CardDAV client."""
@@ -811,7 +808,7 @@ class Cards:
         raise web.MultiStatus(view.carddav(set(["CR"]), responses))
 
 
-@app.route(r"cards/{nickname}")
+@app.control(r"cards/{nickname}")
 class Card:
     """A single card on file."""
 
@@ -822,10 +819,10 @@ class Card:
         # except IndexError:
         #     resource = tx.db.select("cache", where="url = ?",
         #                             vals=[f"http://{self.resource}"])[0]
-        return templates.card(tx.pub.get_card(self.nickname))
+        return app.views.card(tx.pub.get_card(self.nickname))
 
 
-@app.route(r"cards/{nickname}.vcf")
+@app.control(r"cards/{nickname}.vcf")
 class VCard:
     """
     A single card on file, represented as a vCard.
@@ -974,20 +971,20 @@ class VCard:
                    </multistatus>"""
 
 
-@app.route(r"rooms")
+@app.control(r"rooms")
 class Rooms:
     """All rooms on file."""
 
     def get(self):
-        return templates.rooms(tx.pub.get_rooms(), templates.render_dict)
+        return app.views.rooms(tx.pub.get_rooms(), app.views.render_dict)
 
 
-@app.route(r"syndication")
+@app.control(r"syndication")
 class Syndication:
     """."""
 
     def get(self):
-        return templates.syndication()
+        return app.views.syndication()
 
     def post(self):
         destinations = web.form()
@@ -1025,7 +1022,7 @@ class Syndication:
             tx.db.insert("syndication", destination=destination)
 
 
-@app.route(r"media")
+@app.control(r"media")
 class MediaEndpoint:
     """."""
 
@@ -1055,7 +1052,7 @@ class MediaEndpoint:
                         for filepath in media
                     ]
                 }
-        return templates.media(media)
+        return app.views.media(media)
 
     def post(self):
         media_dir = pathlib.Path(tx.host.name)
@@ -1084,7 +1081,7 @@ class MediaEndpoint:
         raise web.Created(f"File can be found at <a href={path}>{path}</a>", path)
 
 
-@app.route(r"media/{filename}")
+@app.control(r"media/{filename}")
 class MediaFile:
     """."""
 

@@ -109,7 +109,6 @@ __all__ = [
 
 sessions_model = sql.model(
     "WebSessions",
-    0,
     sessions={
         "timestamp": "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP",
         "identifier": "TEXT NOT NULL UNIQUE",
@@ -118,7 +117,6 @@ sessions_model = sql.model(
 )
 jobs_model = sql.model(
     "WebJobs",
-    0,
     job_signatures={
         "module": "TEXT",
         "object": "TEXT",
@@ -194,9 +192,10 @@ def ismethod(obj):
 
 def application(
     name,
-    prefix=r"",
-    mount_prefix=r"",
-    db=False,
+    _prefix="",
+    prefix="",
+    model=None,
+    # XXX db=False,
     static=None,  # XXX in favor of explicit mount
     icon=None,  # XXX in favor of explicit mount
     mounts=None,
@@ -204,18 +203,21 @@ def application(
     sessions=False,  # XXX in favor of explicitly wrapper
     host=None,
     port=False,
-    **path_args,
+    args=None,
 ) -> Application:
-    if name in applications:
+    if name in applications:  # TODO FIXME XXX remove concept of multi-module singleton?
         app = applications[name]
         app.prefix = prefix  # FIXME does this have a side effect?
         if wrappers:
             app.add_wrappers(wrappers)
-        app.add_path_args(**path_args)
+        if args:
+            app.add_path_args(**args)
+        # TODO add models?
     else:
         app = Application(
             name,
-            db=db,
+            # XXX db=db,
+            model=model,
             host=host,
             static=static,
             icon=icon,
@@ -223,11 +225,11 @@ def application(
             port=port,
             mounts=mounts,
             wrappers=wrappers,
-            **path_args,
+            args=args,
         )
         app.reload_config()
+        app._prefix = _prefix
         app.prefix = prefix
-        app.mount_prefix = mount_prefix
         applications[name] = app
     return app
 
@@ -643,7 +645,7 @@ class Application:
         >>> @app.wrap
         ... def contextualize(handler, app):
         ...     yield
-        >>> @app.route(r"")
+        >>> @app.control(r"")
         ... class Greeting:
         ...     def get(self):
         ...         return "hello world"
@@ -659,7 +661,9 @@ class Application:
     def __init__(
         self,
         name,
-        db=False,
+        # XXX db=False,
+        args=None,
+        model=None,
         static=None,
         icon=None,
         sessions=False,
@@ -667,7 +671,6 @@ class Application:
         wrappers=None,
         host=None,
         port=False,
-        **path_args,
     ):
         self.name = name
         self.wrappers = []
@@ -676,17 +679,24 @@ class Application:
         self.host = host
         self.port = port
         self.path_args = {}
-        self.add_path_args(**path_args)
+        if args:
+            self.add_path_args(**args)
         if wrappers:
             self.add_wrappers(*wrappers)
         self.mounts = []
         if mounts:
             self.mount(*mounts)
-        self.routes = []  # TODO use ordered dict
+        self.controllers = []  # TODO use ordered dict
 
-        if db:
-            self.db = sql.db(f"web-{name}.db")
-            self.cache = cache(db=self.db)
+        # XXX if db:
+        # XXX     self.db = sql.db(f"web-{name}.db")
+        # XXX     self.cache = cache(db=self.db)
+        if model:
+            self.model = sql.model(name, **model)
+        try:
+            self.views = mm.templates(name)
+        except ModuleNotFoundError:
+            pass
 
         self.kv = kv.db(f"web-{name}", ":", {"jobs": "list"})
         if static:
@@ -761,7 +771,7 @@ class Application:
         # def register(controller):
         #     path = path_template.format(**{k: "(?P<{}>{})".format(k, v) for
         #                                    k, v in self.path_args.items()})
-        #     self.routes.append((path, controller))
+        #     self.controllers.append((path, controller))
         #     return controller
         # return register
 
@@ -772,12 +782,12 @@ class Application:
     #             resource = type(name, bases, attrs)
     #           path = attrs["path"].format(**{k: "(?P<{}>{})".format(k, v) for
     #                                          k, v in self.path_args.items()})
-    #             self.routes.append((path, resourcer))
+    #             self.controllers.append((path, resourcer))
     #             controller.__web__ = path
     #             return resource
     #     return Resource
 
-    def route(self, path_template=None):
+    def control(self, path_template=None):
         """
         decorate a class to run when request path matches template
 
@@ -800,7 +810,7 @@ class Application:
                     "undefined URI fragment" " type `{}`".format(err.args[0])
                 )
 
-            # TODO metaclass for `__repr__` -- see `app.routes`
+            # TODO metaclass for `__repr__` -- see `app.controllers`
             class Route(controller, Resource):
 
                 __doc__ = controller.__doc__
@@ -808,10 +818,10 @@ class Application:
                 handler = controller
 
             try:
-                path = "/".join((self.prefix, path))
+                path = "/".join((self._prefix, path))
             except AttributeError:
                 pass
-            self.routes.append((path.strip("/"), Route))
+            self.controllers.append((path.strip("/"), Route))
             return Route
 
         return register
@@ -824,7 +834,7 @@ class Application:
         for app in apps:
             app.parent_app = self
             self.add_wrappers(*app.wrappers)  # TODO add pre and post wrappers
-            path = app.mount_prefix.format(
+            path = app.prefix.format(
                 **{k: "(?P<{}>{})".format(k, v) for k, v in self.path_args.items()}
             )
             self.mounts.append((path, app))
@@ -1038,7 +1048,7 @@ class Application:
                 raise NotFound(error.resource_not_found())
 
         def get_resource():
-            for pattern, resource in self.routes:
+            for pattern, resource in self.controllers:
                 if isinstance(resource, str):
                     mod = __import__(resource.__module__)
                     resource = getattr(mod, resource)
@@ -1126,12 +1136,12 @@ def sessions(**defaults):  # TODO XXX
     return hook
 
 
-data_app = application("Data", mount_prefix="data", table=r"\w+")
-debug_app = application("Debug", mount_prefix="debug")
-icons_app = application("Icon", mount_prefix="icons")
+data_app = application("Data", prefix="data", args={"table": r"\w+"})
+debug_app = application("Debug", prefix="debug")
+icons_app = application("Icon", prefix="icons")
 
 
-@data_app.route(r"sql")
+@data_app.control(r"sql")
 class SQLiteDatabase:
     """Interface to the SQLite database found at `tx.db`."""
 
@@ -1139,7 +1149,7 @@ class SQLiteDatabase:
         return tx.db.tables
 
 
-@data_app.route(r"sql/{table}")
+@data_app.control(r"sql/{table}")
 class SQLiteTable:
     """A table in `tx.db`."""
 
@@ -1149,7 +1159,7 @@ class SQLiteTable:
         return f"<pre>{rows}</pre>"
 
 
-@debug_app.route(r"")
+@debug_app.control(r"")
 class Debug:
     """Render information about the application structure."""
 
@@ -1171,7 +1181,7 @@ def insert_icon_rels(handler, app):
         tx.response.body = doc.html
 
 
-@icons_app.route(r"icon.png")
+@icons_app.control(r"icon.png")
 class Icon:
     """Your site's icon"""
 
