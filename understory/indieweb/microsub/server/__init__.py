@@ -119,7 +119,7 @@ class MicrosubEndpoint:
         try:
             form = web.form("action", channel="default")
         except web.BadRequest:
-            return app.views.activity(tx.sub.following)
+            return app.view.activity(tx.sub.following)
         if form.action == "follow":
             response = {"items": tx.sub.following}
         elif form.action == "timeline":
@@ -162,7 +162,7 @@ class MicrosubServerSearch:
     def get(self):
         """Return search results for given `q`."""
         form = web.form("q")
-        return app.views.search(form.q, tx.sub.search(form.q))
+        return app.view.search(form.q, tx.sub.search(form.q))
 
 
 @app.control(r"preview")
@@ -172,4 +172,4 @@ class MicrosubServerPreview:
     def get(self):
         """Return a preview of given `url`."""
         form = web.form("url")
-        return app.views.preview(form.url, tx.sub.preview(form.url))
+        return app.view.preview(form.url, tx.sub.preview(form.url))

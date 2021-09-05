@@ -694,7 +694,7 @@ class Application:
         if model:
             self.model = sql.model(name, **model)
         try:
-            self.views = mm.templates(name)
+            self.view = mm.templates(name)
         except ModuleNotFoundError:
             pass
 

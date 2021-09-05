@@ -81,7 +81,7 @@ def route_unrouted(handler, app):
         if channel["resource"]["url"][0] == f"/{tx.request.uri.path}":
             posts = tx.pub.get_posts_by_channel(channel["resource"]["uid"][0])
             web.header("Content-Type", "text/html")
-            raise web.OK(app.views.channel(channel, posts))
+            raise web.OK(app.view.channel(channel, posts))
     yield
 
 
@@ -487,7 +487,7 @@ class MicropubEndpoint:
             reviews = []  # local_client.get_reviews()
             rooms = local_client.get_rooms()
             media = local_client.get_media()
-            return app.views.activity(
+            return app.view.activity(
                 channels, entries, cards, events, reviews, rooms, media
             )
 
@@ -568,7 +568,7 @@ class Channels:
     """All channels."""
 
     def get(self):
-        return app.views.channels(LocalClient().get_channels())
+        return app.view.channels(LocalClient().get_channels())
 
 
 @app.control(r"channels/{channel}")
@@ -576,7 +576,7 @@ class Channel:
     """A single channel."""
 
     def get(self):
-        return app.views.channel(self.channel)
+        return app.view.channel(self.channel)
 
 
 @app.control(r"entries")
@@ -584,7 +584,7 @@ class Entries:
     """All entries on file."""
 
     def get(self):
-        return app.views.entries(LocalClient().get_entries(), app.views.render_dict)
+        return app.view.entries(LocalClient().get_entries(), app.view.render_dict)
 
 
 @app.control(r"entries/{entry}")
@@ -600,7 +600,7 @@ class Entry:
             resource = tx.db.select(
                 "cache", where="url = ?", vals=[f"http://{self.resource}"]
             )[0]
-        return app.views.cache_resource(resource)
+        return app.view.cache_resource(resource)
 
 
 @app.control(r"cards")
@@ -613,7 +613,7 @@ class Cards:
     """
 
     def get(self):
-        return app.views.cards(tx.pub.get_cards(), app.views.render_dict)
+        return app.view.cards(tx.pub.get_cards(), app.view.render_dict)
 
     def options(self):
         """Signal capabilities to CardDAV client."""
@@ -819,7 +819,7 @@ class Card:
         # except IndexError:
         #     resource = tx.db.select("cache", where="url = ?",
         #                             vals=[f"http://{self.resource}"])[0]
-        return app.views.card(tx.pub.get_card(self.nickname))
+        return app.view.card(tx.pub.get_card(self.nickname))
 
 
 @app.control(r"cards/{nickname}.vcf")
@@ -976,7 +976,7 @@ class Rooms:
     """All rooms on file."""
 
     def get(self):
-        return app.views.rooms(tx.pub.get_rooms(), app.views.render_dict)
+        return app.view.rooms(tx.pub.get_rooms(), app.view.render_dict)
 
 
 @app.control(r"syndication")
@@ -984,7 +984,7 @@ class Syndication:
     """."""
 
     def get(self):
-        return app.views.syndication()
+        return app.view.syndication()
 
     def post(self):
         destinations = web.form()
@@ -1052,7 +1052,7 @@ class MediaEndpoint:
                         for filepath in media
                     ]
                 }
-        return app.views.media(media)
+        return app.view.media(media)
 
     def post(self):
         media_dir = pathlib.Path(tx.host.name)

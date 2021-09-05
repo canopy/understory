@@ -49,7 +49,7 @@ class Users:
     """."""
 
     def get(self):
-        return app.views.users(get_users())
+        return app.view.users(get_users())
 
 
 @app.control(r"sign-in")
@@ -60,7 +60,7 @@ class SignIn:
         try:
             form = web.form("me", return_to="/")
         except web.BadRequest:
-            return app.views.signin(tx.host.name)
+            return app.view.signin(tx.host.name)
         # XXX try:
         # XXX     rels = tx.cache[form.me].mf2json["rels"]
         # XXX except web.ConnectionError:
@@ -133,7 +133,7 @@ class SignOut:
     """IndieAuth client sign out."""
 
     def get(self):
-        return app.views.signout()
+        return app.view.signout()
 
     def post(self):
         access_token = tx.db.select(

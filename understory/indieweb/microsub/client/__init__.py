@@ -11,7 +11,7 @@ class TextReader:
 
     def get(self):
         """Render the editor."""
-        return app.views.text()
+        return app.view.text()
 
 
 @app.control(r"image")
@@ -20,4 +20,4 @@ class ImageReader:
 
     def get(self):
         """Render the editor."""
-        return app.views.image()
+        return app.view.image()
