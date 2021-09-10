@@ -140,15 +140,14 @@ def delete(url, **kwargs):
 
 
 class Cache:
-    model = sql.model(
-        "WebCache",
-        cache={
+    model = {
+        "cache": {
             "url": "TEXT UNIQUE",
             "html": "TEXT",
             "headers": "JSON",
             "data": "JSON",
         },
-    )
+    }
 
     def __init__(self, domain=None, db=None):
         self.cache = {}
@@ -157,7 +156,9 @@ class Cache:
         if db:
             self.db = db
         else:
-            self.db = sql.db("cache.db", self.model)  # TODO FIXME user :memory:
+            self.db = sql.db(
+                "cache.db", sql.model("WebCache", self.model)
+            )  # TODO FIXME user :memory:
 
     def format_url(self, url):
         try:

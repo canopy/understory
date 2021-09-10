@@ -1,8 +1,6 @@
 """Mountable IndieWeb apps and helper functions."""
 
-import pathlib
-
-from understory import kv, mm, sql, web
+from understory import mm, web
 from understory.web import tx
 
 from . import indieauth, micropub, microsub, webmention, websub
@@ -12,7 +10,9 @@ __all__ = ["personal_site"]
 
 about = web.application("About", prefix="about")
 people = web.application("People", prefix="people")
-cache = web.application("Cache", prefix="cache", args={"resource": r".+"})
+cache = web.application(
+    "Cache", prefix="cache", args={"resource": r".+"}, model=web.cache.model
+)
 content = web.application(
     "Content",
     args={
@@ -28,39 +28,9 @@ templates = mm.templates(__name__)
 
 def personal_site(name: str, host: str = None, port: int = None) -> web.Application:
     """Return a `web.applicaion` pre-configured for use as a personal website."""
-    models = [
-        web.cache.model,
-        web.framework.sessions_model,
-        web.framework.jobs_model,
-        indieauth.server.app.model,
-        indieauth.client.app.model,
-        websub.publisher.app.model,
-        micropub.server.app.model,
-        microsub.server.app.model,
-        webmention.app.model,
-    ]
-    for site_db in pathlib.Path().glob("site-*.db"):
-        sql.db(site_db, *models)
-
-    def set_data_sources(handler, app):
-        host = tx.request.uri.host
-        db = sql.db(f"site-{host}.db", *models)
-        tx.host.db = db
-        tx.host.cache = web.cache(db=db)
-        tx.host.kv = kv.db(host, ":", {"jobs": "list"})
-        yield
-        # TODO XXX if tx.request.uri.path == "" and tx.response.body:
-        # TODO XXX     doc = web.parse(tx.response.body)
-        # TODO XXX     try:
-        # TODO XXX         head = doc.select("head")[0]
-        # TODO XXX     except IndexError:
-        # TODO XXX         tx.response.body = (
-        # TODO XXX             f"<!doctype html><head></head>"
-        # TODO XXX             f"<body>{tx.response.body}</body></html>"
-        # TODO XXX         )
-
     return web.application(
         name,
+        db=True,
         host=host,
         port=port,
         mounts=(
@@ -81,8 +51,6 @@ def personal_site(name: str, host: str = None, port: int = None) -> web.Applicat
             content,  # has no prefix, must remain last
         ),
         wrappers=(
-            set_data_sources,
-            web.resume_session,
             micropub.server.wrap,
             microsub.server.wrap,
             indieauth.server.wrap,

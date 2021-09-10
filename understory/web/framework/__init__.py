@@ -72,7 +72,7 @@ __all__ = [
     "get_nonce",
     "get_token",
     "best_match",
-    "sessions",
+    # XXX "sessions",
     "require_auth",
     "tx",
     "kv",
@@ -195,7 +195,7 @@ def application(
     _prefix="",
     prefix="",
     model=None,
-    # XXX db=False,
+    db=False,
     static=None,  # XXX in favor of explicit mount
     icon=None,  # XXX in favor of explicit mount
     mounts=None,
@@ -216,7 +216,7 @@ def application(
     else:
         app = Application(
             name,
-            # XXX db=db,
+            db=db,
             model=model,
             host=host,
             static=static,
@@ -661,7 +661,7 @@ class Application:
     def __init__(
         self,
         name,
-        # XXX db=False,
+        db=False,
         args=None,
         model=None,
         static=None,
@@ -681,16 +681,29 @@ class Application:
         self.path_args = {}
         if args:
             self.add_path_args(**args)
-        if wrappers:
-            self.add_wrappers(*wrappers)
         self.mounts = []
         if mounts:
             self.mount(*mounts)
         self.controllers = []  # TODO use ordered dict
 
-        # XXX if db:
-        # XXX     self.db = sql.db(f"web-{name}.db")
-        # XXX     self.cache = cache(db=self.db)
+        if db:
+            models = [sessions_model, jobs_model] + [
+                app.model for _, app in self.mounts if getattr(app, "model", None)
+            ]
+            # XXX for site_db in pathlib.Path().glob("site-*.db"):
+            # XXX     sql.db(site_db, *models)
+
+            def set_data_sources(handler, app):
+                tx.host.db = sql.db(f"site-{tx.request.uri.host}.db", *models)
+                tx.host.cache = cache(db=tx.host.db)
+                tx.host.kv = kv.db(tx.request.uri.host, ":", {"jobs": "list"})
+                yield
+
+            self.add_wrappers(set_data_sources)
+            self.add_wrappers(resume_session)
+        if wrappers:
+            self.add_wrappers(*wrappers)
+
         if model:
             self.model = sql.model(name, **model)
         try:
@@ -698,10 +711,15 @@ class Application:
         except ModuleNotFoundError:
             pass
 
-        self.kv = kv.db(f"web-{name}", ":", {"jobs": "list"})
-        if static:
-            static_path = pkg_resources.resource_filename(static, "static")
-            self.static_path = pathlib.Path(static_path)
+        try:
+            self.static_path = pathlib.Path(
+                pkg_resources.resource_filename(name, "static")
+            )
+        except ModuleNotFoundError:
+            pass
+
+        self.kv = kv.db(f"web-{name}", ":", {"jobs": "list"})  # TODO XXX
+
         # for method in http.spec.request.methods[:5]:
         #     setattr(self, method, functools.partial(self.get_handler,
         #                                             method=method))
@@ -1089,113 +1107,53 @@ class Application:
             raise exc
 
 
-def sessions(**defaults):  # TODO XXX
-    """
-    returns an application hook for session handling using given redis `db`
-
-    """
-
-    def hook(handler, app):
-        try:
-            identifier = tx.request.headers["cookie"].morsels["session"]
-        except KeyError:
-            identifier = 0
-        if ("sessions", identifier) not in kvdb:
-            while True:
-                secret = "{}{}{}{}".format(
-                    random.getrandbits(128),
-                    app.cfg["session"]["salt"],
-                    time.time(),
-                    tx.user.ip,
-                )
-                secret_hash = hashlib.sha256(secret.encode("utf-8"))
-                identifier = secret_hash.hexdigest()
-                if kvdb["sessions", identifier].setnx("anonymous"):
-                    break
-        session_timeout = app.cfg["session"].get("timeout", default_session_timeout)
-        kvdb["sessions", identifier].expire(session_timeout)
-        # FIXME user.session = kvdb.hgetall(kvdb(user.identifier, "data"))
-        data = kvdb["sessions", identifier, "data"]
-        if data:
-            data = json.loads(str(data))
-        else:
-            data = Session(defaults)
-        # XXX print(identifier, data)
-        tx.user.session = data
-        tx.user.identifier = identifier
-        yield
-        kvdb["sessions", identifier, "data"] = JSONEncoder().encode(tx.user.session)
-        kvdb["sessions", identifier, "data"].expire(session_timeout)
-        # FIXME kvdb.delete("data")
-        # FIXME if user.session:
-        # FIXME     kvdb.hmset("data", **user.session)
-        # XXX print(identifier, data, tx.user.identifier, tx.user.session)
-        tx.response.headers["set-cookie"] = (("session", tx.user.identifier),)
-        # ("Domain", tx.host.name))
-
-    return hook
-
-
-data_app = application("Data", prefix="data", args={"table": r"\w+"})
-debug_app = application("Debug", prefix="debug")
-icons_app = application("Icon", prefix="icons")
-
-
-@data_app.control(r"sql")
-class SQLiteDatabase:
-    """Interface to the SQLite database found at `tx.db`."""
-
-    def get(self):
-        return tx.db.tables
-
-
-@data_app.control(r"sql/{table}")
-class SQLiteTable:
-    """A table in `tx.db`."""
-
-    def get(self):
-        rows = pprint.pformat([dict(r) for r in tx.db.select(self.table)])
-        header("Content-Type", "text/html")
-        return f"<pre>{rows}</pre>"
-
-
-@debug_app.control(r"")
-class Debug:
-    """Render information about the application structure."""
-
-    def get(self):
-        return config_templates.debug(tx.app)
-
-
-@icons_app.wrap
-def insert_icon_rels(handler, app):
-    # TODO handle `favicon.ico` requests here
-    yield
-    if (
-        tx.response.status == "200 OK"
-        and tx.response.headers.content_type == "text/html"
-    ):
-        doc = parse(tx.response.body)
-        head = doc.select("head")[0]
-        head.append("<link rel=icon href=/icon.png>")
-        tx.response.body = doc.html
-
-
-@icons_app.control(r"icon.png")
-class Icon:
-    """Your site's icon"""
-
-    def get(self):
-        # TODO set `icon_path` when you add the `insert_icon_rels` wrapper
-        icon_path = None  # XXX pkg_resources.resource_filename(icon, "icon.png")
-        payload = pathlib.Path(icon_path)
-
-        header("Content-Type", "image/png")
-        try:
-            with payload.open("rb") as fp:
-                return fp.read()
-        except AttributeError:
-            return payload
+# XXX def sessions(**defaults):
+# XXX     """
+# XXX     returns an application hook for session handling using given redis `db`
+# XXX
+# XXX     """
+# XXX
+# XXX     def hook(handler, app):
+# XXX         try:
+# XXX             identifier = tx.request.headers["cookie"].morsels["session"]
+# XXX         except KeyError:
+# XXX             identifier = 0
+# XXX         if ("sessions", identifier) not in kvdb:
+# XXX             while True:
+# XXX                 secret = "{}{}{}{}".format(
+# XXX                     random.getrandbits(128),
+# XXX                     app.cfg["session"]["salt"],
+# XXX                     time.time(),
+# XXX                     tx.user.ip,
+# XXX                 )
+# XXX                 secret_hash = hashlib.sha256(secret.encode("utf-8"))
+# XXX                 identifier = secret_hash.hexdigest()
+# XXX                 if kvdb["sessions", identifier].setnx("anonymous"):
+# XXX                     break
+# XXX         session_timeout = app.cfg["session"].get("timeout",
+# XXX                                                  default_session_timeout)
+# XXX         kvdb["sessions", identifier].expire(session_timeout)
+# XXX         # FIXME user.session = kvdb.hgetall(kvdb(user.identifier, "data"))
+# XXX         data = kvdb["sessions", identifier, "data"]
+# XXX         if data:
+# XXX             data = json.loads(str(data))
+# XXX         else:
+# XXX             data = Session(defaults)
+# XXX         # XXX print(identifier, data)
+# XXX         tx.user.session = data
+# XXX         tx.user.identifier = identifier
+# XXX         yield
+# XXX         kvdb["sessions", identifier, "data"] = \
+# XXX             JSONEncoder().encode(tx.user.session)
+# XXX         kvdb["sessions", identifier, "data"].expire(session_timeout)
+# XXX         # FIXME kvdb.delete("data")
+# XXX         # FIXME if user.session:
+# XXX         # FIXME     kvdb.hmset("data", **user.session)
+# XXX         # XXX print(identifier, data, tx.user.identifier, tx.user.session)
+# XXX         tx.response.headers["set-cookie"] = (("session", tx.user.identifier),)
+# XXX         # ("Domain", tx.host.name))
+# XXX
+# XXX     return hook
 
 
 def resume_session(handler, app):
@@ -1270,6 +1228,68 @@ class Session(dict):
 
     def __setattr__(self, name, value):
         self[name] = value
+
+
+data_app = application("Data", prefix="data", args={"table": r"\w+"})
+debug_app = application("Debug", prefix="debug")
+icons_app = application("Icon", prefix="icons")
+
+
+@data_app.control(r"sql")
+class SQLiteDatabase:
+    """Interface to the SQLite database found at `tx.db`."""
+
+    def get(self):
+        return tx.db.tables
+
+
+@data_app.control(r"sql/{table}")
+class SQLiteTable:
+    """A table in `tx.db`."""
+
+    def get(self):
+        rows = pprint.pformat([dict(r) for r in tx.db.select(self.table)])
+        header("Content-Type", "text/html")
+        return f"<pre>{rows}</pre>"
+
+
+@debug_app.control(r"")
+class Debug:
+    """Render information about the application structure."""
+
+    def get(self):
+        return config_templates.debug(tx.app)
+
+
+@icons_app.wrap
+def insert_icon_rels(handler, app):
+    # TODO handle `favicon.ico` requests here
+    yield
+    if (
+        tx.response.status == "200 OK"
+        and tx.response.headers.content_type == "text/html"
+    ):
+        doc = parse(tx.response.body)
+        head = doc.select("head")[0]
+        head.append("<link rel=icon href=/icon.png>")
+        tx.response.body = doc.html
+
+
+@icons_app.control(r"icon.png")
+class Icon:
+    """Your site's icon"""
+
+    def get(self):
+        # TODO set `icon_path` when you add the `insert_icon_rels` wrapper
+        icon_path = None  # XXX pkg_resources.resource_filename(icon, "icon.png")
+        payload = pathlib.Path(icon_path)
+
+        header("Content-Type", "image/png")
+        try:
+            with payload.open("rb") as fp:
+                return fp.read()
+        except AttributeError:
+            return payload
 
 
 def run_redis(socket):

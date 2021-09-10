@@ -141,7 +141,7 @@ def serve(db_prefixes):
             handle_job(db_prefix, job, db)  # , browser)
 
     for db_prefix in db_prefixes:
-        kvdb = kv.db(db_prefix, ":", {"jobs": "list"})
+        kvdb = kv.db(db_prefix.removeprefix("site-"), ":", {"jobs": "list"})
         sqldb = sql.db(f"{db_prefix}.db")
         # browser = agent.browser()
         for _ in range(worker_count):
