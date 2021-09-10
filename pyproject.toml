@@ -1,38 +1,24 @@
 [tool.poetry]
 name = "understory"
-version = "0.0.63"
-description = "The tools that power the canopy"
+version = "0.0.67"
+description = "Web framework with IndieWeb support"
 authors = ["Angelo Gladding <angelo@lahacker.net>"]
 license = "AGPL-3.0-or-later"
 readme = "README.md"
 
 [tool.poetry.urls]
-Homepage = "https://understory.stream"
+Homepage = "https://understory.cloud/understory"
 Issues = "https://github.com/canopy/understory/issues"
 
 [tool.poetry.scripts]
 loveliness = "understory.loveliness:main"
+pkg = "understory.pkg.__main__:main"
+web = "understory.web.__main__:main"
 # indieauth = "understory.indieweb.indieauth:main"
 # micropub = "understory.indieweb.micropub:main"
 # microsub = "understory.indieweb.microsub:main"
 # followers = "understory.indieweb.followers:main"
 # mentions = "understory.indieweb.webmention:main"
-pkg = "understory.pkg.__main__:main"
-web = "understory.web.__main__:main"
-
-[tool.poetry.plugins."web.apps"]
-content = "understory.indieweb:content"
-# db = "understory.indieweb:db"
-# cache = "understory.indieweb:cache"
-# favicon = "understory.indieweb:favicon"
-# static = "understory.indieweb:static"
-# templates = "understory.indieweb:templates"
-"indieauth-client" = "understory.indieweb.indieauth:client"
-"indieauth-server" = "understory.indieweb.indieauth:server"
-micropub = "understory.indieweb.micropub:server"
-microsub = "understory.indieweb.microsub:server"
-webmention = "understory.indieweb.webmention:receiver"
-websub = "understory.indieweb.websub:hub"
 
 [tool.poetry.dependencies]
 python = "^3.9,<3.10"
