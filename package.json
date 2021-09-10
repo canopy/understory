@@ -2,7 +2,6 @@
   "name": "understory.js",
   "version": "0.0.1",
   "description": "The tools that power the canopy",
-  "main": "understory.js",
   "directories": {
     "doc": "docs",
     "test": "tests"
@@ -24,6 +23,9 @@
     "understory/indieweb/understory.js"
   ],
   "homepage": "https://github.com/canopy/understory#readme",
+  "dependencies": {
+    "js-sha256": "^0.9.0"
+  },
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "^4.27.0",
     "@typescript-eslint/parser": "^4.27.0",
@@ -36,8 +38,5 @@
     "ts-loader": "^9.2.3",
     "webpack": "^5.39.1",
     "webpack-cli": "^4.7.2"
-  },
-  "dependencies": {
-    "js-sha256": "^0.9.0"
   }
 }
