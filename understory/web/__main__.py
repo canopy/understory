@@ -32,10 +32,19 @@ class Serve:
 
     def setup(self, add_arg):
         add_arg("app", help="name of web application")
-        add_arg("port", help="port to serve")
+        add_arg("--port", help="port to serve on")
+        add_arg("--socket", help="file socket to serve on")
+        add_arg("--watch", default=".", help="directory to watch for changes")
 
     def run(self, stdin, log):
-        web.serve(self.app, self.port)
+        if self.port:
+            web.serve(self.app, port=self.port, watch_dir=self.watch)
+        elif self.socket:
+            web.serve(self.app, socket=self.socket, watch_dir=self.watch)
+        else:
+            print("must provide a port or a socket")
+            return 1
+        return 0
 
         # from pprint import pprint
         # pprint(web.get_apps())

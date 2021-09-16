@@ -291,7 +291,7 @@ def config_servers(root, web_server_config_handler=None):
     )
 
 
-def serve(wsgi_app, port=9300, workers=2, socket=None):
+def serve(wsgi_app, port=9300, socket=None, workers=2, watch_dir="."):
     # root = pathlib.Path(app.cfg["root"])
     # watch = app.cfg.get("watch")
     # bg = False
@@ -318,7 +318,7 @@ def serve(wsgi_app, port=9300, workers=2, socket=None):
     # if watch:
     event_handler = Watchdog(proc)
     observer = watchdog.observers.Observer()
-    observer.schedule(event_handler, ".", recursive=True)
+    observer.schedule(event_handler, watch_dir, recursive=True)
     observer.start()
     try:
         proc.wait()
