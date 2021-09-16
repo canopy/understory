@@ -114,11 +114,7 @@ class MicropubClient {
             })
         }).then(response => {
             if (response.status === 200 || response.status === 201) {
-                const permalink = response.headers.get('location');
-                // if (permalink.startsWith('/')) {
-                //   permalink = `https://${me}${permalink}`
-                // }
-                return permalink;
+                return response.headers.get('location'); // permalink
             }
         });
     }
