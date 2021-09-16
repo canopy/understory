@@ -476,17 +476,16 @@ class MicropubEndpoint:
     """."""
 
     def get(self):
-        local_client = LocalClient()
         try:
             form = web.form("q")
         except web.BadRequest:
-            channels = local_client.get_channels()
-            entries = local_client.get_entries()
-            cards = local_client.get_cards()
-            events = []  # local_client.get_events()
-            reviews = []  # local_client.get_reviews()
-            rooms = local_client.get_rooms()
-            media = local_client.get_media()
+            channels = tx.pub.get_channels()
+            entries = tx.pub.get_entries()
+            cards = tx.pub.get_cards()
+            events = []  # tx.pub.get_events()
+            reviews = []  # tx.pub.get_reviews()
+            rooms = tx.pub.get_rooms()
+            media = tx.pub.get_media()
             return app.view.activity(
                 channels, entries, cards, events, reviews, rooms, media
             )
@@ -494,7 +493,7 @@ class MicropubEndpoint:
         def generate_channels():
             return [
                 {"name": r["name"][0], "uid": r["uid"][0]}
-                for r in local_client.get_channels()
+                for r in tx.pub.get_channels()
             ]
 
         # TODO XXX elif form.q == "channel":
@@ -507,15 +506,15 @@ class MicropubEndpoint:
                 response = {
                     "items": [
                         {"url": [r["resource"]["url"]]}
-                        for r in local_client.search(form.search)
+                        for r in tx.pub.search(form.search)
                     ]
                 }
             elif "url" in form:
-                response = dict(local_client.read(form.url))
+                response = dict(tx.pub.read(form.url))
             else:
                 pass  # TODO list all posts
         elif form.q == "category":
-            response = {"categories": local_client.get_categories()}
+            response = {"categories": tx.pub.get_categories()}
         else:
             raise web.BadRequest(
                 """unsupported query.
@@ -540,11 +539,10 @@ class MicropubEndpoint:
                 for k, v in form.items()
             }
             resource = {"type": [f"h-{h}"], "properties": properties}
-        client = LocalClient()
         try:
             action = resource.pop("action")
         except KeyError:
-            permalink = client.create(
+            permalink = tx.pub.create(
                 resource["type"][0].partition("-")[2], **resource["properties"]
             )
             # web.header("Link", '</blat>; rel="shortlink"', add=True)
@@ -553,11 +551,11 @@ class MicropubEndpoint:
             raise web.Created("post created", permalink)
         if action == "update":
             url = resource.pop("url")
-            client.update(url, **resource)
+            tx.pub.update(url, **resource)
             return
         elif action == "delete":
             url = resource.pop("url")
-            client.delete(url)
+            tx.pub.delete(url)
             return "deleted"
         elif action == "undelete":
             pass
@@ -568,7 +566,7 @@ class Channels:
     """All channels."""
 
     def get(self):
-        return app.view.channels(LocalClient().get_channels())
+        return app.view.channels(tx.pub.get_channels())
 
 
 @app.control(r"channels/{channel}")
@@ -584,7 +582,7 @@ class Entries:
     """All entries on file."""
 
     def get(self):
-        return app.view.entries(LocalClient().get_entries(), app.view.render_dict)
+        return app.view.entries(tx.pub.get_entries(), app.view.render_dict)
 
 
 @app.control(r"entries/{entry}")
@@ -1027,7 +1025,7 @@ class MediaEndpoint:
     """."""
 
     def get(self):
-        media = LocalClient().get_media()
+        media = tx.pub.get_media()
         try:
             query = web.form("q").q
         except web.BadRequest:
@@ -1106,7 +1104,7 @@ class MediaFile:
             web.header("X-Accel-Redirect", f"/X/{relative_path}")
 
     def delete(self):
-        filepath = LocalClient().get_filepath(self.filename)
+        filepath = tx.pub.get_filepath(self.filename)
         tx.db.delete("media", where="mid = ?", vals=[filepath.stem])
         filepath.unlink()
         return "deleted"
