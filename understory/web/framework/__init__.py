@@ -57,7 +57,7 @@ from ..response import (OK, Accepted, BadRequest, Conflict, Created, Forbidden,
 from .letsencrypt import generate_cert
 from .newmath import nb60_re, nbdecode, nbencode, nbrandom
 from .passphrases import generate_passphrase, verify_passphrase
-from .util import JSONEncoder, header, json, shift_headings, tx
+from .util import JSONEncoder, add_rel_links, header, json, shift_headings, tx
 
 warnings.simplefilter("ignore")
 
@@ -113,6 +113,14 @@ sessions_model = sql.model(
         "timestamp": "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP",
         "identifier": "TEXT NOT NULL UNIQUE",
         "data": "TEXT NOT NULL",
+    },
+)
+owner_model = sql.model(
+    "WebOwner",
+    credentials={
+        "created": "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP",
+        "salt": "BLOB",
+        "scrypt_hash": "BLOB",
     },
 )
 jobs_model = sql.model(
@@ -1233,6 +1241,7 @@ class Session(dict):
 data_app = application("Data", prefix="data", args={"table": r"\w+"})
 debug_app = application("Debug", prefix="debug")
 icons_app = application("Icon", prefix="icons")
+owner_app = application("Owner", prefix="owner", model=owner_model)
 
 
 @data_app.control(r"sql")
@@ -1290,6 +1299,97 @@ class Icon:
                 return fp.read()
         except AttributeError:
             return payload
+
+
+def wrap_owner(handler, app):
+    tx.host.owner = get_card()
+    if not tx.host.owner:
+        web.header("Content-Type", "text/html")
+        if tx.request.method == "GET":
+            raise web.OK(app.view.claim())
+        elif tx.request.method == "POST":
+            uid, passphrase = init_owner(web.form("name").name)
+            raise web.Created(app.view.claimed(uid, " ".join(passphrase)), uid)
+    try:
+        tx.user.is_owner = tx.user.session["uid"] == tx.host.owner["uid"][0]
+    except (AttributeError, KeyError, IndexError):
+        tx.user.is_owner = False
+    # passthrough = (
+    #     "auth",
+    #     "auth/sign-in",
+    #     "auth/claim",
+    #     "auth/sign-ins/token",
+    #     "auth/visitors/sign-in",
+    #     "auth/visitors/authorize",
+    # )
+    # if (
+    #     tx.request.uri.path.startswith(("auth", "pub", "sub"))
+    #     and tx.request.uri.path not in passthrough
+    #     and not tx.user.is_owner
+    #     and not tx.request.headers.get("Authorization")
+    # ):  # TODO validate token
+    #     raise web.Unauthorized(app.view.unauthorized())
+    yield
+
+
+def init_owner(name):
+    """Initialize owner of the requested domain."""
+    salt, scrypt_hash, passphrase = web.generate_passphrase()
+    tx.db.insert("credentials", salt=salt, scrypt_hash=scrypt_hash)
+    version = web.nbrandom(3)
+    uid = str(web.uri(tx.origin))
+    tx.db.insert(
+        "resources",
+        permalink="/",
+        version=version,
+        resource={
+            "name": [name],
+            "type": ["card"],
+            "url": [uid],
+            "uid": [uid],
+            "visibility": ["public"],
+        },
+    )
+    tx.user.session = {"uid": uid, "name": name}
+    tx.user.is_owner = True
+    tx.host.owner = tx.db.select("resources", where="permalink = ?", vals=["/"])[0][
+        "resource"
+    ]
+    return uid, passphrase
+
+
+@owner_app.control(r"sign-in")
+class SignIn:
+    """Sign in as the owner of the site."""
+
+    def post(self):
+        form = web.form("passphrase", return_to="/")
+        credential = tx.db.select("credentials", order="created DESC")[0]
+        if web.verify_passphrase(
+            credential["salt"],
+            credential["scrypt_hash"],
+            form.passphrase.translate({32: None}),
+        ):
+            tx.user.session["uid"] = tx.host.owner["uid"][0]
+            raise web.SeeOther(form.return_to)
+        raise web.Unauthorized("bad passphrase")
+
+
+@owner_app.control(r"sign-out")
+class SignOut:
+    """Sign out as the owner of the site."""
+
+    def get(self):
+        if not tx.user.is_owner:
+            raise web.Unauthorized("must be owner")
+        return app.view.signout()
+
+    def post(self):
+        if not tx.user.is_owner:
+            raise web.Unauthorized("must be owner")
+        tx.user.session = None
+        return_to = web.form(return_to="").return_to
+        raise web.SeeOther(f"/{return_to}")
 
 
 def run_redis(socket):

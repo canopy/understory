@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "understory"
-version = "0.0.67"
+version = "0.0.71"
 description = "Web framework with IndieWeb support"
 authors = ["Angelo Gladding <angelo@lahacker.net>"]
 license = "AGPL-3.0-or-later"

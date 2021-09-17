@@ -12,6 +12,7 @@ import lxml.html
 from gevent import local
 from understory import uri
 
+from ..agent import parse
 from ..headers import Headers
 
 __all__ = ["tx", "header", "shift_headings", "json", "JSONEncoder"]
@@ -39,6 +40,23 @@ def header(name, value, add=False):
             tx.response.headers[name].append(value)
     else:
         tx.response.headers[name] = value
+
+
+def add_rel_links(**rels):
+    """"""
+    if not tx.response.body:
+        return
+    doc = parse(tx.response.body)
+    try:
+        head = doc.select("head")[0]
+    except IndexError:
+        pass
+    else:
+        for rel, value in rels.items():
+            head.append(f"<link rel={rel} href={value}>")
+        tx.response.body = doc.html
+    for rel, value in rels.items():
+        header("Link", f'<{value}>; rel="{rel}"', add=True)
 
 
 class JSONEncoder(json.JSONEncoder):
