@@ -1,29 +1,17 @@
 """Mountable IndieWeb apps and helper functions."""
 
 from understory import mm, web
+from understory.apps import (indieauth_client, indieauth_server,
+                             micropub_server, text_editor)
 from understory.web import tx
 
-from . import indieauth, micropub, microsub, webmention, websub
-from .indieauth.server import get_card
+from ..apps import cache, content, data, owner, search
+from . import microsub, webmention, websub
 
 __all__ = ["personal_site"]
 
 about = web.application("About", prefix="about")
 people = web.application("People", prefix="people")
-cache = web.application(
-    "Cache", prefix="cache", args={"resource": r".+"}, model=web.cache.model
-)
-content = web.application(
-    "Content",
-    args={
-        "year": r"\d{4}",
-        "month": r"\d{2}",
-        "day": r"\d{2}",
-        "post": web.nb60_re + r"{,4}",
-        "slug": r"[\w_-]+",
-    },
-)
-templates = mm.templates(__name__)
 
 
 def personal_site(name: str, host: str = None, port: int = None) -> web.Application:
@@ -34,27 +22,30 @@ def personal_site(name: str, host: str = None, port: int = None) -> web.Applicat
         host=host,
         port=port,
         mounts=(
-            about,
-            people,
-            cache,
-            web.data_app,
+            owner.app,
+            search.app,
+            cache.app,
+            data.app,
+            # TODO about,
+            # TODO people,
             web.debug_app,
-            indieauth.server.app,
-            indieauth.client.app,
+            indieauth_server.app,
+            indieauth_client.app,
             websub.publisher.app,  # websub must come before micropub/microsub
             websub.subscriber.app,
-            micropub.server.app,
-            micropub.client.app,
+            text_editor.app,
+            micropub_server.app,
             microsub.server.app,
             microsub.client.app,
             webmention.app,
-            content,  # has no prefix, must remain last
+            content.app,  # has no prefix, must remain last
         ),
         wrappers=(
-            micropub.server.wrap,
+            owner.wrap,
+            micropub_server.wrap,
             microsub.server.wrap,
-            indieauth.server.wrap,
-            indieauth.client.wrap,
+            indieauth_server.wrap,
+            indieauth_client.wrap,
             webmention.wrap,
             websub.publisher.wrap,
         ),
@@ -66,7 +57,7 @@ class About:
     """"""
 
     def get(self):
-        return templates.about.index(get_card(), tx.pub.get_posts())
+        return templates.about.index(tx.host.owner, tx.pub.get_posts())
 
 
 @about.control(r"editor")
@@ -74,7 +65,7 @@ class AboutEditor:
     """"""
 
     def get(self):
-        return templates.about.editor(get_card(), tx.pub.get_posts())
+        return templates.about.editor(tx.host.owner, tx.pub.get_posts())
 
     def post(self):
         if not tx.user.is_owner:
@@ -102,22 +93,22 @@ class AboutEditor:
         return "saved"
 
     def set_name(self, name):
-        card = get_card()
+        card = tx.host.owner
         card.update(name=[name])
         tx.db.update("identities", card=card)
 
     def set_note(self, note):
-        card = get_card()
+        card = tx.host.owner
         card["note"] = [note]
         tx.db.update("identities", card=card)
 
     def set_github(self, name):
-        card = get_card()
+        card = tx.host.owner
         card["url"].append(f"https://github.com/{name}")
         tx.db.update("identities", card=card)
 
     def set_twitter(self, name):
-        card = get_card()
+        card = tx.host.owner
         card["url"].append(f"https://twitter.com/{name}")
         tx.db.update("identities", card=card)
 
@@ -135,56 +126,3 @@ class People:
         return templates.people.index(
             indieauth.server.get_clients(), indieauth.client.get_users()
         )
-
-
-@cache.control(r"")
-class Cache:
-    def get(self):
-        return templates.cache.index(tx.db.select("cache"))
-
-
-@cache.control(r"{resource}")
-class Resource:
-    """"""
-
-    resource = None
-
-    def get(self):
-        resource = tx.db.select(
-            "cache",
-            where="url = ? OR url = ?",
-            vals=[f"https://{self.resource}", f"http://{self.resource}"],
-        )[0]
-        return templates.cache.resource(resource)
-
-
-@content.control(r"")
-class Homepage:
-    """Your name, avatar and one or more streams of posts."""
-
-    def get(self):
-        # resource = tx.pub.read(tx.request.uri.path)["resource"]
-        # if resource["visibility"] == "private" and not tx.user.session:
-        #     raise web.Unauthorized(f"/auth?return_to={tx.request.uri.path}")
-        # # mentions = web.indie.webmention.get_mentions(str(tx.request.uri))
-        # return templates.content.entry(resource)  # , mentions)
-        return templates.content.homepage(
-            get_card(),  # TODO tx.auth.get_card
-            tx.pub.get_posts(),
-        )
-
-
-@content.control(r"{year}/{month}/{day}/{post}(/{slug})?")
-class Permalink:
-    """An individual entry."""
-
-    def get(self):
-        try:
-            resource = tx.pub.read(tx.request.uri.path)["resource"]
-        except micropub.server.PostNotFoundError:
-            web.header("Content-Type", "text/html")  # TODO FIXME XXX
-            raise web.NotFound(templates.post_not_found())
-        if resource["visibility"] == "private" and not tx.user.session:
-            raise web.Unauthorized(f"/auth?return_to={tx.request.uri.path}")
-        # mentions = web.indie.webmention.get_mentions(str(tx.request.uri))
-        return templates.content.entry(resource)  # , mentions)
