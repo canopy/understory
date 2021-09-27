@@ -78,6 +78,9 @@ class Database:
     def keys(self):
         return self.cursor.keys()
 
+    def type(self, key):
+        return self.cursor.type(key)
+
     def get_value(self, key):
         class_name = self.db.type(key).decode("utf-8").capitalize()
         return globals()[class_name](self.db, key)
@@ -171,6 +174,9 @@ class Cursor:
     def random_key(self):
         """"""
         return self.db.randomkey()
+
+    def type(self, key):
+        return self._gen_key(key)[1]
 
     def transaction(self, handler, *args):
         """"""
