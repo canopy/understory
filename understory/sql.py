@@ -553,10 +553,10 @@ class Cursor:
             # if vals:
             #     where = where.format(*[str(adapt(v)) for v in vals])
             sql_parts.append("WHERE {}".format(where))
-        if order:
-            sql_parts.append("ORDER BY {}".format(order))
         if group:
             sql_parts.append("GROUP BY {}".format(group))
+        if order:
+            sql_parts.append("ORDER BY {}".format(order))
         if limit:
             limitsql = "LIMIT {}".format(limit)
             if offset:
