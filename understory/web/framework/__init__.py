@@ -656,9 +656,10 @@ class Application:
             # XXX     sql.db(site_db, *models)
 
             def set_data_sources(handler, app):
-                tx.host.db = sql.db(f"site-{tx.request.uri.host}.db", *models)
-                tx.host.cache = cache(db=tx.host.db)
                 tx.host.kv = kv.db(tx.request.uri.host, ":", {"jobs": "list"})
+                tx.host.db = sql.db(f"site-{tx.request.uri.host}.db", *models)
+                cache_db = sql.db(f"cache-{tx.request.uri.host}.db", cache.model)
+                tx.host.cache = cache(db=cache_db)
                 yield
 
             self.add_wrappers(set_data_sources)

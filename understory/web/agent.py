@@ -109,7 +109,7 @@ def request(method, url, session=None, **kwargs):
     # except (requests.exceptions.SSLError, requests.exceptions.ConnectionError):
     #     if url.suffix != "onion":
     #         try:
-    response = context.request(method, f"http://{url.minimized}", **kwargs)
+    response = context.request(method, url, **kwargs)
     #         except (requests.exceptions.SSLError, requests.exceptions.ConnectionError):
     #             raise RequestFailed()
     return response
@@ -140,81 +140,137 @@ def delete(url, **kwargs):
 
 
 class Cache:
-    model = {
-        "cache": {
-            "url": "TEXT UNIQUE",
-            "html": "TEXT",
-            "headers": "JSON",
+    """A dictionary-like cache of the web."""
+
+    model = sql.model(
+        "WebCache",
+        resources={
+            "origin": "TEXT",
+            "path": "TEXT",
             "data": "JSON",
+            "headers": "JSON",
+            "title": "TEXT",
+            "html": "TEXT",
+            "UNIQUE": "(origin, path)",
         },
-    }
+        search={
+            "origin": "",
+            "path": "",
+            "text": "",
+            "FTS": True,
+        },
+    )
 
-    def __init__(self, domain=None, db=None):
-        self.cache = {}
-        if domain:
-            self.domain = domain
-        if db:
-            self.db = db
-        else:
-            self.db = sql.db(
-                "cache.db", sql.model("WebCache", self.model)
-            )  # TODO FIXME user :memory:
-
-    def format_url(self, url):
-        try:
-            url = f"{self.domain}/{url}"
-        except AttributeError:
-            url = url
-        return url
+    def __init__(self, origin=None, db=None):
+        self.origin = origin
+        if not db:
+            db = sql.db("cache.db", self.model)
+        self.db = db
 
     def add(self, url):
-        url = self.format_url(url)
+        url = self._make_url(url)
         resource = get(url)
-        self.cache[url] = resource
+        try:
+            title = resource.dom.select("title")[0].text
+        except IndexError:
+            title = None
         try:
             self.db.insert(
-                "cache",
-                url=url,
-                html=resource.text,
-                headers=dict(resource.headers),
+                "resources",
+                origin=url.origin,
+                path=url.path,
                 data=resource.mf2json.data,
+                headers=dict(resource.headers),
+                title=title,
+                html=resource.text,
+            )
+            self.db.insert(
+                "search",
+                origin=url.origin,
+                path=url.path,
+                text=str(resource.mf2json.data),
             )
         except self.db.IntegrityError:
             self.db.update(
-                "cache",
-                html=resource.text,
-                headers=dict(resource.headers),
+                "resources",
                 data=resource.mf2json.data,
-                where="url = ?",
-                vals=[url],
+                headers=dict(resource.headers),
+                title=title,
+                html=resource.text,
+                where="origin = ? AND path = ?",
+                vals=[url.origin, url.path],
             )
-        except AttributeError:
-            pass
-        return resource
+            self.db.update(
+                "search",
+                origin=url.origin,
+                path=url.path,
+                text=str(resource.mf2json.data),
+                where="origin = ? AND path = ?",
+                vals=[url.origin, url.path],
+            )
+        return url, resource
 
-    def __getitem__(self, resource_url):
-        resource_url = str(resource_url)
-        try:
-            resource = self.cache[resource_url]
-        except KeyError:
-            try:
-                url = self.format_url(resource_url)
-                resource_data = self.db.select("cache", where="url = ?", vals=[url])[0]
-                resource = Transaction(url, fetch=False)
-                resource.headers = resource_data["headers"]  # TODO case-insen
-                resource.text = resource_data["html"]
-            except (AttributeError, IndexError):
-                self.add(resource_url)
-                resource = self.cache[resource_url]
-        return resource
+    def search(self, query):
+        return self.db.select(
+            "search AS s",
+            what="r.*, s.text",
+            where="search MATCH ?",
+            vals=[query],
+            join="resources AS r ON r.origin = s.origin AND r.path = s.path",
+            order="rank",
+        )
+
+    @property
+    def domains(self):
+        return [
+            (uri.parse(r["origin"]), r["data"])
+            for r in self.db.select(
+                "resources", what="origin, data", order="origin ASC", group="origin"
+            )
+        ]
+
+    def forget_domain(self, domain):
+        return self.db.delete(
+            "resources",
+            where="origin = ? OR origin = ?",
+            vals=[f"https://{domain}", f"http://{domain}"],
+        )
+
+    def get_pages(self, domain):
+        return self.db.select(
+            "resources",
+            where="origin = ? OR origin = ?",
+            vals=[f"https://{domain}", f"http://{domain}"],
+            order="path ASC",
+        )
 
     @property
     def graph(self):
         network = nx.DiGraph()
-        for url, resource in self.cache.items():
+        for url, resource in self.cache.items():  # TODO iterate over database items
             # print(resource.links)
             network.add_node(url)
         return nx.draw(network, with_labels=True)
+
+    def _make_url(self, url):
+        if self.origin:
+            url = f"{self.origin}/{url}"
+        return uri.parse(url)
+
+    def __getitem__(self, resource_url):
+        try:
+            url = self._make_url(resource_url)
+            resource_data = self.db.select(
+                "resources",
+                where="origin = ? AND path = ?",
+                vals=[url.origin, url.path],
+            )[0]
+            resource = Transaction(url, fetch=False)
+            resource.headers = resource_data["headers"]  # TODO case-insen
+            resource.text = resource_data["html"]
+        except (AttributeError, IndexError):
+            url, resource = self.add(resource_url)
+        return url, resource
 
 
 cache = Cache
@@ -223,12 +279,25 @@ cache = Cache
 class Transaction:
     """."""
 
-    def __init__(self, url, method="get", fetch=True, session=None, **kwargs):
-        self.url = str(uri.parse(str(url)))
+    def __init__(
+        self, url, method="get", fetch=True, session=None, headers=None, **kwargs
+    ):
+        self.url = str(url)
         if fetch:
             # XXX handler = getattr(requests, method)
             # XXX self.response = handler(apply_dns(self.url), **kwargs)
-            self.response = request(method, self.url, session=session, **kwargs)
+            _headers = {
+                "accept": "text/html;q=0.9,*/*;q=0.8",
+                "user-agent": (
+                    "Mozilla/5.0 (X11; Linux x86_64; rv:92.0) "
+                    "Gecko/20100101 Firefox/92.0"
+                ),
+            }
+            if headers:
+                _headers.update(headers)
+            self.response = request(
+                method, self.url, session=session, headers=_headers, **kwargs
+            )
             self.status = self.response.status_code
             self.text = self.response.text
             self.headers = self.response.headers
@@ -385,10 +454,12 @@ class Element:
     def replace(self, html):
         self.element.getparent().replace(self.element, _make_element(html))
 
-    # TODO automatically add only if an: a or link
     @property
     def href(self):
-        return self.element.attrib["href"]
+        try:
+            return self.element.attrib["href"]
+        except KeyError:
+            raise AttributeError("href")
 
     @property
     def text(self):

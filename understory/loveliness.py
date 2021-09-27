@@ -72,18 +72,18 @@ def run_scheduler():  # browser):
 #     # time.sleep(.9)
 
 
-def handle_job(host, job_run_id, db):  # , browser):
+def handle_job(host, job_run_id, kv, db, cache_db):  # , browser):
     """Handle a freshly dequeued job."""
     # TODO handle retries
     tx.host.name = host
     tx.host.db = db
-    tx.host.cache = web.cache(db=db)
+    tx.host.kv = kv
+    tx.host.cache = web.cache(db=cache_db)
     # tx.browser = browser
     job = tx.db.select(
         "job_runs AS r",
         what="s.rowid, *",
-        join="""job_signatures AS s
-                                   ON s.rowid = r.job_signature_id""",
+        join="job_signatures AS s ON s.rowid = r.job_signature_id",
         where="r.job_id = ?",
         vals=[job_run_id],
     )[0]
@@ -113,8 +113,7 @@ def handle_job(host, job_run_id, db):  # , browser):
     tx.db.update(
         "job_runs",
         vals=[status, output, job_run_id],
-        what="""finished = STRFTIME('%Y-%m-%d %H:%M:%f', 'NOW'),
-                             status = ?, output = ?""",
+        what="finished = STRFTIME('%Y-%m-%d %H:%M:%f', 'NOW'), status = ?, output = ?",
         where="job_id = ?",
     )
     run = tx.db.select("job_runs", where="job_id = ?", vals=[job_run_id])[0]
@@ -132,20 +131,21 @@ def handle_job(host, job_run_id, db):  # , browser):
     print(flush=True)
 
 
-def serve(db_prefixes):
+def serve(domains):
     """"""
     # TODO gevent.spawn(run_scheduler)  # , sqldbs)  # , browser)
 
-    def run_worker(db_prefix, kv, db):  # browser):
+    def run_worker(domain, kv, db, cache_db):  # browser):
         for job in kv["jobs"].keep_popping():
-            handle_job(db_prefix, job, db)  # , browser)
+            handle_job(domain, job, kv, db, cache_db)  # , browser)
 
-    for db_prefix in db_prefixes:
-        kvdb = kv.db(db_prefix.removeprefix("site-"), ":", {"jobs": "list"})
-        sqldb = sql.db(f"{db_prefix}.db")
+    for domain in domains:
+        kvdb = kv.db(domain, ":", {"jobs": "list"})
+        sqldb = sql.db(f"site-{domain}.db")
+        cache_db = sql.db(f"cache-{domain}.db")
         # browser = agent.browser()
         for _ in range(worker_count):
-            gevent.spawn(run_worker, db_prefix, kvdb, sqldb)  # , browser)
+            gevent.spawn(run_worker, domain, kvdb, sqldb, cache_db)  # , browser)
     try:
         while True:
             time.sleep(1)
@@ -160,7 +160,7 @@ class Serve:
 
     def run(self, stdin, log):
         """Spawn a scheduler and workers and start sending jobs to them."""
-        serve(p.stem for p in pathlib.Path().glob("site-*.db"))
+        serve(p.stem.removeprefix("site-") for p in pathlib.Path().glob("site-*.db"))
 
 
 if __name__ == "__main__":
