@@ -71,6 +71,8 @@ def from_json(val):
             if key not in dct:
                 return
             item = dct[key]
+            if not item[0]:
+                return
             tz = None
             if isinstance(item[0], dict):
                 val = item[0]["datetime"]
@@ -81,11 +83,37 @@ def from_json(val):
                 val = item
             if val[-6] in "-+":
                 val = "".join(val.rpartition(":")[::2])
-            datetime = "YYYY-MM-DDTHH:mm:ss"
+            val = val.strip()
+            f1 = "YYYY-MM-DDTHH:mm:ss"
+            f2 = "YYYY-MM-DD HH:mm:ss"
+            f3 = "YYYY-MM-DDTHH:mm"
+            f4 = "YYYY-MM-DD HH:mm"
+            f5 = "YYYY-MM-DD"
             try:
-                dt = pendulum.from_format(val, f"{datetime}.SSSSSSZ")
+                dt = pendulum.from_format(val, f"{f1}.SSSSSSZ")
             except ValueError:
-                dt = pendulum.from_format(val, f"{datetime}Z")
+                try:
+                    dt = pendulum.from_format(val, f"{f1}Z")
+                except ValueError:
+                    try:
+                        dt = pendulum.from_format(val, f"{f2}.SSSSSSZ")
+                    except ValueError:
+                        try:
+                            dt = pendulum.from_format(val, f"{f2}Z")
+                        except ValueError:
+                            try:
+                                dt = pendulum.from_format(val, f"{f3}.SSSSSSZ")
+                            except ValueError:
+                                try:
+                                    dt = pendulum.from_format(val, f"{f3}Z")
+                                except ValueError:
+                                    try:
+                                        dt = pendulum.from_format(val, f"{f4}.SSSSSSZ")
+                                    except ValueError:
+                                        try:
+                                            dt = pendulum.from_format(val, f"{f4}Z")
+                                        except ValueError:
+                                            dt = pendulum.from_format(val, f"{f5}")
             if tz:
                 dt = dt.astimezone(pendulum.timezone(tz))
             dct[key] = [dt]
@@ -449,6 +477,9 @@ class Cursor:
         class Results:
             def __init__(innerself, results):
                 innerself.results = list(results)
+
+            def pop(innerself, index):
+                return innerself.results.pop(index)
 
             def __getitem__(innerself, index):
                 return innerself.results[index]
