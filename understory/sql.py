@@ -131,8 +131,9 @@ class Model:
         self.schemas = schemas
         self.version = 0
         self.migrations = {}
+        self.controllers = {}
 
-    def __call__(self, version):
+    def migrate(self, version):
         if version > self.version:
             self.version = version
 
@@ -141,6 +142,21 @@ class Model:
             return f
 
         return add_migration
+
+    def control(self, controller):
+        self.controllers[controller.__name__] = controller
+
+    def __call__(self, db):
+        return ModelController(self.controllers, db)
+
+
+class ModelController:
+    def __init__(self, controllers, db):
+        self.controllers = controllers
+        self.db = db
+
+    def __getattr__(self, attr):
+        return functools.partial(self.controllers[attr], self.db)
 
 
 model = Model
