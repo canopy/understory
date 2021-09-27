@@ -12,7 +12,6 @@ Issues = "https://github.com/canopy/understory/issues"
 
 [tool.poetry.scripts]
 loveliness = "understory.loveliness:main"
-pkg = "understory.pkg.__main__:main"
 web = "understory.web.__main__:main"
 
 [tool.poetry.dependencies]
