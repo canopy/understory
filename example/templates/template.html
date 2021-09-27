@@ -1,0 +1,113 @@
+$def with (resource)
+<!doctype html>
+<html class=dark>
+<head>
+<meta name=charset content=utf-8>
+<meta name=generator content=canopy>
+<meta name=viewport content="initial-scale=1.0,user-scalable=no,\
+maximum-scale=1,width=device-width">
+<title>
+$if "title" in resource:
+    $:resource.title&thinsp;&mdash;&thinsp;
+$# $about["name"][0]
+</title>
+<style>
+body {
+    background-color: #002b36;
+    color: #839496;
+    font-size: 16px;
+    margin: 2.5em; }
+a:link {
+    color: #268bd2; }
+a:visited {
+    color: #6c71c4; }
+a:active {
+    color: #dc322f; }
+h1 {
+    font-size: 2.5em; }
+h1 a {
+    color: #000;
+    text-decoration: none; }
+body > nav:first-child {
+    display: grid;
+    grid-template-columns: 50% 50%; }
+body > nav:first-child > ul {
+    display: grid;
+    grid-template-columns: 20% 20% 20% 20% 20%;
+    list-style: none;
+    margin: 0;
+    padding: 0; }
+body > nav:first-child > ul li {
+    text-align: center; }
+body > nav:first-child > ul a {
+    display: block; }
+#user {
+    text-align: right; }
+</style>
+$# <link rel=stylesheet href=/static/solarized.css>
+$# <script src=/static/canopy.js crossorigin=anonymous></script>
+$# <script>const _ = Canopy('$about["name"][0]')</script>
+$if not isinstance(resource, str) and "head" in resource:
+    $:resource.head()
+</head>
+<body>
+$if not getattr(tx.user, "is_authenticating", False):
+    <nav>
+    $if "uid" in tx.user.session:
+        $if tx.user.is_owner:
+            $ action = "/auth/sign-out"
+        $else:
+            $ action = "/auth/visitors/sign-out"
+        <form id=user method=post action=$action>
+        <input type=hidden name=return_to value=$tx.request.uri.path>
+        <strong>$tx.user.session["uid"]</strong>
+        <button>Sign Out</button>
+        </form>
+    $else:
+        <form id=user method=get action=/auth/visitors/sign-in>
+        <input type=text name=me placeholder="your website address">
+        <button>Sign In</button>
+        </form>
+    </nav>
+    $if tx.request.uri.path:
+        $ sep = "&ensp;<span class=crumb-sep>&#x25b8;</span>"
+        $ post_sep = "&ensp;"
+        <p>\
+        <a rel="home index" href=/>Home</a>$:sep
+        $if "breadcrumbs" in resource:
+            $ breadcrumbs = resource["breadcrumbs"]
+            $ n = int(len(breadcrumbs) / 2)
+            $ top_ups = " ".join(["up"] * (n + 1))
+            $ hierarchy = ""
+            $for bc_path, crumb_title in zip(*(breadcrumbs[i::2] for i in (0, 1))):
+                $ bc_path = str(bc_path)
+                $ crumb_title = str(crumb_title)
+                $if "absolute_breadcrumbs" in resource:
+                    $ hierarchy = ""
+                $ hierarchy += "/" + bc_path
+                $ crumb_icon = None
+                $if isinstance(crumb_title, tuple):
+                    $ crumb_icon, crumb_title = crumb_title
+                <span>\
+                $if crumb_icon:
+                    <span class="fa fa-$crumb_icon"></span>&thinsp;\
+                <a href=$hierarchy
+                rel="$(" ".join(["up"] * n))">$:crumb_title</a>$:sep</span>$:post_sep\
+                $ n -= 1
+        </p>
+$if "title" in resource:
+    <h1>$:resource.title</h1>
+$:resource
+$if tx.user.is_owner:
+    <nav id=admin>
+    <ul>
+    <li><a href=/auth>Identity</a></li>
+    <li><a href=/pub>Content</a></li>
+    <li><a href=/sub>Following</a></li>
+    <li><a href=/mentions>Mentions</a></li>
+    <li><a href=/hub>Followers</a></li>
+    <li><a href=/access>Visitors</a></li>
+    </ul>
+    </nav>
+</body>
+</html>
