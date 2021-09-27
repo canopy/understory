@@ -43,7 +43,7 @@ __all__ = [
 ]
 
 
-def parse(uri, secure=True) -> URI:
+def parse(uri, secure=True) -> HTTPURI | HTTPSURI:
     """Return a `URI` object for given `uri`.
 
     Various web-related protocols supported.
@@ -53,23 +53,12 @@ def parse(uri, secure=True) -> URI:
         >>> script = parse("javascript:alert('hello world')")
 
     """
-    # TODO FIXME XXX NOTES: simple and expected...
     uri = str(uri)
-    if ":" in uri:
-        scheme, _, identifier = uri.partition(":")
-    else:
-        scheme = "http"
-
-    # XXX first_slash = scheme.find("/")
-    # XXX if not identifier or (first_slash > 0 and len(scheme) > first_slash):
-    # XXX     scheme = "http"
-    # XXX     identifier = uri
-
+    scheme, _, identifier = uri.partition(":")
     try:
         handler = supported_schemes[scheme]
     except KeyError:
         raise ValueError(f"scheme `{scheme}` not supported")
-
     return handler(uri)
 
     # XXX uri = handler(identifier)
@@ -238,6 +227,7 @@ class HTTPURI(URI):
             self.subdomain, self.domain, self.suffix = publicsuffix.split(
                 parts.hostname
             )
+            self.origin = f"{self.scheme}://{self.netloc}"
         self.path = self._normalize_path(parts.path).lstrip("/")
         self.raw_query = self._normalize_query(parts.query)
         self.query = urllib.parse.parse_qs(self.raw_query)
