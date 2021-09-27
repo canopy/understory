@@ -115,52 +115,6 @@ sessions_model = sql.model(
         "data": "TEXT NOT NULL",
     },
 )
-owner_model = sql.model(
-    "WebOwner",
-    credentials={
-        "created": "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP",
-        "salt": "BLOB",
-        "scrypt_hash": "BLOB",
-    },
-)
-jobs_model = sql.model(
-    "WebJobs",
-    job_signatures={
-        "module": "TEXT",
-        "object": "TEXT",
-        "args": "BLOB",
-        "kwargs": "BLOB",
-        "arghash": "TEXT",
-        "unique": ("module", "object", "arghash"),
-    },
-    job_runs={
-        "job_signature_id": "INTEGER",
-        "job_id": "TEXT UNIQUE",
-        "created": "DATETIME NOT NULL DEFAULT(STRFTIME('%Y-%m-%d %H:%M:%f', 'NOW'))",
-        "started": "DATETIME",
-        "finished": "DATETIME",
-        "start_time": "REAL",
-        "run_time": "REAL",
-        "status": "INTEGER",
-        "output": "TEXT",
-    },
-    job_schedules={
-        "job_signature_id": "INTEGER",
-        "minute": "TEXT",
-        "hour": "TEXT",
-        "day_of_month": "TEXT",
-        "month": "TEXT",
-        "day_of_week": "TEXT",
-        "unique": (
-            "job_signature_id",
-            "minute",
-            "hour",
-            "day_of_month",
-            "month",
-            "day_of_week",
-        ),
-    },
-)
 kvdb = kv.db(
     "web",
     ":",
@@ -695,7 +649,7 @@ class Application:
         self.controllers = []  # TODO use ordered dict
 
         if db:
-            models = [sessions_model, jobs_model] + [
+            models = [sessions_model] + [
                 app.model for _, app in self.mounts if getattr(app, "model", None)
             ]
             # XXX for site_db in pathlib.Path().glob("site-*.db"):
@@ -1238,36 +1192,7 @@ class Session(dict):
         self[name] = value
 
 
-data_app = application("Data", prefix="data", args={"table": r"\w+"})
-debug_app = application("Debug", prefix="debug")
 icons_app = application("Icon", prefix="icons")
-owner_app = application("Owner", prefix="owner", model=owner_model)
-
-
-@data_app.control(r"sql")
-class SQLiteDatabase:
-    """Interface to the SQLite database found at `tx.db`."""
-
-    def get(self):
-        return tx.db.tables
-
-
-@data_app.control(r"sql/{table}")
-class SQLiteTable:
-    """A table in `tx.db`."""
-
-    def get(self):
-        rows = pprint.pformat([dict(r) for r in tx.db.select(self.table)])
-        header("Content-Type", "text/html")
-        return f"<pre>{rows}</pre>"
-
-
-@debug_app.control(r"")
-class Debug:
-    """Render information about the application structure."""
-
-    def get(self):
-        return config_templates.debug(tx.app)
 
 
 @icons_app.wrap
@@ -1299,97 +1224,6 @@ class Icon:
                 return fp.read()
         except AttributeError:
             return payload
-
-
-def wrap_owner(handler, app):
-    tx.host.owner = get_card()
-    if not tx.host.owner:
-        web.header("Content-Type", "text/html")
-        if tx.request.method == "GET":
-            raise web.OK(app.view.claim())
-        elif tx.request.method == "POST":
-            uid, passphrase = init_owner(web.form("name").name)
-            raise web.Created(app.view.claimed(uid, " ".join(passphrase)), uid)
-    try:
-        tx.user.is_owner = tx.user.session["uid"] == tx.host.owner["uid"][0]
-    except (AttributeError, KeyError, IndexError):
-        tx.user.is_owner = False
-    # passthrough = (
-    #     "auth",
-    #     "auth/sign-in",
-    #     "auth/claim",
-    #     "auth/sign-ins/token",
-    #     "auth/visitors/sign-in",
-    #     "auth/visitors/authorize",
-    # )
-    # if (
-    #     tx.request.uri.path.startswith(("auth", "pub", "sub"))
-    #     and tx.request.uri.path not in passthrough
-    #     and not tx.user.is_owner
-    #     and not tx.request.headers.get("Authorization")
-    # ):  # TODO validate token
-    #     raise web.Unauthorized(app.view.unauthorized())
-    yield
-
-
-def init_owner(name):
-    """Initialize owner of the requested domain."""
-    salt, scrypt_hash, passphrase = web.generate_passphrase()
-    tx.db.insert("credentials", salt=salt, scrypt_hash=scrypt_hash)
-    version = web.nbrandom(3)
-    uid = str(web.uri(tx.origin))
-    tx.db.insert(
-        "resources",
-        permalink="/",
-        version=version,
-        resource={
-            "name": [name],
-            "type": ["card"],
-            "url": [uid],
-            "uid": [uid],
-            "visibility": ["public"],
-        },
-    )
-    tx.user.session = {"uid": uid, "name": name}
-    tx.user.is_owner = True
-    tx.host.owner = tx.db.select("resources", where="permalink = ?", vals=["/"])[0][
-        "resource"
-    ]
-    return uid, passphrase
-
-
-@owner_app.control(r"sign-in")
-class SignIn:
-    """Sign in as the owner of the site."""
-
-    def post(self):
-        form = web.form("passphrase", return_to="/")
-        credential = tx.db.select("credentials", order="created DESC")[0]
-        if web.verify_passphrase(
-            credential["salt"],
-            credential["scrypt_hash"],
-            form.passphrase.translate({32: None}),
-        ):
-            tx.user.session["uid"] = tx.host.owner["uid"][0]
-            raise web.SeeOther(form.return_to)
-        raise web.Unauthorized("bad passphrase")
-
-
-@owner_app.control(r"sign-out")
-class SignOut:
-    """Sign out as the owner of the site."""
-
-    def get(self):
-        if not tx.user.is_owner:
-            raise web.Unauthorized("must be owner")
-        return app.view.signout()
-
-    def post(self):
-        if not tx.user.is_owner:
-            raise web.Unauthorized("must be owner")
-        tx.user.session = None
-        return_to = web.form(return_to="").return_to
-        raise web.SeeOther(f"/{return_to}")
 
 
 def run_redis(socket):

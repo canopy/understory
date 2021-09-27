@@ -25,7 +25,6 @@ from . import agent, braid, framework
 from .agent import *  # noqa
 from .braid import *  # noqa
 from .framework import *  # noqa
-from .framework import data_app, debug_app
 from .response import Status  # noqa
 from .response import (OK, Accepted, BadRequest, Conflict, Created, Forbidden,
                        Found, Gone, MethodNotAllowed, MultiStatus, NoContent,
@@ -50,8 +49,6 @@ __all__ = [
     "websub",
     "run_queue",
     "uri",
-    "data_app",
-    "debug_app",
     "Created",
     "ConnectionError",
 ]
