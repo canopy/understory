@@ -355,12 +355,21 @@ def db(path, *models) -> Database:
             current_version = current_models[model.name]
         except KeyError:  # doesn't exist, create all tables in model
             for table, schema in model.schemas.items():
-                dbi.create(
-                    table,
-                    ", ".join(
-                        f"{col} {definition}" for col, definition in schema.items()
-                    ),
-                )
+                fts = schema.pop("FTS", False)
+                if fts:
+                    dbi.create(
+                        table,
+                        ", ".join(f"{col}" for col in schema),
+                        fts=True,
+                    )
+                else:
+                    dbi.create(
+                        table,
+                        ", ".join(
+                            f"{col} {definition}" for col, definition in schema.items()
+                        ),
+                        fts=False,
+                    )
             dbi.insert("_models", name=model.name, version=model.version)
             current_models[model.name] = model.version
             continue
@@ -395,13 +404,12 @@ class Cursor:
             return self.cur.fetchone()[command]
         self.cur.execute(f"PRAGMA {command} = {value}")
 
-    def create(self, table, schema):
+    def create(self, table, schema, fts=False):
         """
         create a table with given column schema
 
         """
-        schema, _, fts = schema.partition(";")
-        if fts.strip().lower() == "fts":
+        if fts:
             sql = f"CREATE VIRTUAL TABLE {table} USING fts5 ({schema})"
         else:
             sql = f"CREATE TABLE {table} ({schema})"
