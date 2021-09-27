@@ -24,7 +24,6 @@ import hashlib
 import inspect
 import os
 import pathlib
-import pprint
 import re
 import secrets
 import shutil
@@ -77,6 +76,7 @@ __all__ = [
     "tx",
     "kv",
     "header",
+    "add_rel_links",
     "Application",
     "Resource",
     "nbencode",
@@ -681,7 +681,7 @@ class Application:
         except ModuleNotFoundError:
             pass
 
-        self.kv = kv.db(f"web-{name}", ":", {"jobs": "list"})  # TODO XXX
+        # XXX self.kv = kv.db(f"web-{name}", ":", {"jobs": "list"})
 
         # for method in http.spec.request.methods[:5]:
         #     setattr(self, method, functools.partial(self.get_handler,
