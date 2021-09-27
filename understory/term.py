@@ -5,7 +5,7 @@
 # TODO pager w/ hjkl, [shift+]space, ctrl+[b|f], tab through links (web/mail),
 #      mouse scroll & click on links
 
-import builtins
+# TODO XXX FIXME import builtins
 import os
 import re
 import sys
@@ -108,8 +108,8 @@ import sys
 
 import argcomplete
 
-from understory import pkg
-from understory.pkg import listing
+# from understory import pkg
+# from understory.pkg import listing
 
 
 class Application:
@@ -131,19 +131,19 @@ class Application:
     def __init__(self, name, description):
         self.name = name
         desc, _, epilog = description.partition("\n\n")
-        version, people, license = self.get_metadata()
-        epilog += (
-            "-   width may be forced by setting `TTY_WIDTH`\n"
-            "-   colors may be forced by setting `COLORS_OFF` "
-            "or `COLORS_ON`\n\n"
-            "Released under the {} by:\n".format(license)
-        )
-        for person, roles in sorted(people.items()):
-            epilog += "  {}: ".format(person)
-            epilog += ", ".join(
-                "<{}> ({})".format(address, role)
-                for role, address in sorted(roles.items())
-            )
+        # version, people, license = self.get_metadata()
+        # epilog += (
+        #     "-   width may be forced by setting `TTY_WIDTH`\n"
+        #     "-   colors may be forced by setting `COLORS_OFF` "
+        #     "or `COLORS_ON`\n\n"
+        #     "Released under the {} by:\n".format(license)
+        # )
+        # for person, roles in sorted(people.items()):
+        #     epilog += "  {}: ".format(person)
+        #     epilog += ", ".join(
+        #         "<{}> ({})".format(address, role)
+        #         for role, address in sorted(roles.items())
+        #     )
         parser = argparse.ArgumentParser(
             prog=name,
             description=desc,
@@ -153,12 +153,12 @@ class Application:
         )
         add_arg = parser.add_argument
         add_arg("--help", action="store_true", help="print this help message and exit")
-        add_arg(
-            "--version",
-            action="version",
-            version=version,
-            help="print version number and exit",
-        )
+        # add_arg(
+        #     "--version",
+        #     action="version",
+        #     version=version,
+        #     help="print version number and exit",
+        # )
         add_arg(
             "--color",
             action="store_true",
@@ -179,20 +179,20 @@ class Application:
         )
         self.parser = parser
 
-    def get_metadata(self):
-        """
-        return a three-tuple of app's package's version, people and license
+    # def get_metadata(self):
+    #     """
+    #     return a three-tuple of app's package's version, people and license
 
-        """
-        dist: pkg.Distribution = None
-        for dist_name in listing.get_distributions(dependencies=True):
-            dist = listing.get_distribution(dist_name)
-            if self.name in dist.details.get("entry-points", {}).get(
-                "console_scripts", []
-            ):
-                break
-        dist = dist.details
-        return dist["version"], dist["people"], dist["license"]
+    #     """
+    #     dist = None
+    #     for dist_name in listing.get_distributions(dependencies=True):
+    #         dist = listing.get_distribution(dist_name)
+    #         if self.name in dist.details.get("entry-points", {}).get(
+    #             "console_scripts", []
+    #         ):
+    #             break
+    #     dist = dist.details
+    #     return dist["version"], dist["people"], dist["license"]
 
     def register(self, alias=None):
         """

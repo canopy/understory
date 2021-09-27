@@ -62,11 +62,12 @@ import lxml.html.builder as E  # noqa
 import pygments
 import pygments.formatters
 import pygments.lexers
-
 from understory import uri
-from understory.pkg import licensing
 
 from .titlecase import titlecase
+
+# XXX from understory.pkg import licensing
+
 
 # from . import hyphenator
 
@@ -683,20 +684,20 @@ class ImageAutoReference(AutoReference):
 #     """"""
 
 
-class LicenseAutoReference(AutoReference):
-
-    """"""
-
-    pattern = "%" + AutoReference.pattern
-
-    def parse(self, match):
-        alias = match.group(1)
-        try:
-            uri, name, version = licensing.get_license(alias)
-        except licensing.LookupError:
-            return alias
-        anchor_template = '<a href="http://{}" rel=license>{} License</a>'
-        return anchor_template.format(uri, name)
+# class LicenseAutoReference(AutoReference):
+#
+#     """"""
+#
+#     pattern = "%" + AutoReference.pattern
+#
+#     def parse(self, match):
+#         alias = match.group(1)
+#         try:
+#             uri, name, version = licensing.get_license(alias)
+#         except licensing.LookupError:
+#             return alias
+#         anchor_template = '<a href="http://{}" rel=license>{} License</a>'
+#         return anchor_template.format(uri, name)
 
 
 # class OrgLink(Link):
