@@ -1,0 +1,10 @@
+$def with (resource)
+$var title: Cache
+
+$ repr = representative_card(resource["data"], resource["url"])
+<div>
+$if repr:
+    <p>$repr["name"][0]</p>
+<p><big><code>$resource["url"]</code></big></p>
+<pre><small>$pformat(resource["data"])</small></pre>
+</div>

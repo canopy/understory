@@ -1,0 +1,105 @@
+$def with (owner, posts)
+
+<style>
+body {
+    display: grid;
+    grid-template-columns: 61.8% 38.2%;
+    margin: 2em auto;
+    width: 50em; }
+header {
+    grid-column: 2;
+    grid-row: 1; }
+h1 {
+    margin-top: 0; }
+article {
+    grid-column: 1;
+    grid-row: 1; }
+article > p:first-child {
+    font-size: 2em;
+    margin-top: 0; }
+ul.elsewhere {
+    list-style: none;
+    padding-left: 1em; }
+li a {
+    display: grid;
+    grid-column-gap: .2em;
+    grid-template-columns: 1em auto;
+    margin: .2em;
+    padding: .2em; }
+li a span {
+    font-size: .8em; }
+</style>
+
+<script src=/static/understory.js crossorigin=anonymous></script>
+<script>
+const { MicropubClient } = understory
+const pub = new MicropubClient('/pub')
+document.addEventListener('DOMContentLoaded', () => {
+  // XXX document.querySelectorAll('form').forEach(el => {
+  // XXX   el.style.display = 'none'
+  // XXX })
+  const name = document.querySelector('h1')
+  name.addEventListener('keypress', ev => {
+    if (ev.which === 13) {
+      ev.preventDefault()
+      name.contentEditable = false
+      name.blur()
+      pub.update('/', 'replace', 'name', [name.innerText]).then(permalink => {
+        console.log("UPDATED!!!!")
+      })
+    }
+  })
+  name.addEventListener('click', () => {
+    name.contentEditable = true
+    name.focus()
+  })
+})
+</script>
+
+<header class=h-card>
+
+<h1 class=p-name><a class="u-url u-uid" href=$owner["uid"]>$owner["name"]</a></h1>
+
+$ note = owner.get("note")
+$if note:
+    <p>$note[0]</p>
+
+<ul class=elsewhere>
+$for url in owner.get("url", []):
+    $if tx.request.uri.host in url:
+        $continue
+    <li>
+    $for service, pattern in SILOS.items():
+        $ match = re.match(pattern, url)
+        $if match:
+            <a rel=me href=$url title=$service><img
+            src=/static/logos/$(service.lower()).svg alt=$service
+            style="height:1em"><span>$match.groupdict()["user"]</span></a>
+            $break
+    $else:
+        <a rel=me href=$url>$url</a>
+    </li>
+</ul>
+
+<div style="float:right"><small><a href=/about>more about me</a></small></div>
+
+</header>
+
+<article class=h-feed>
+$for post in posts:
+    <p class=h-entry>
+    $if "content" in post:
+        $if "name" in post:
+            <strong class=p-name>$post["name"][0]</strong>,
+            $" ".join(post["content"][0].split()[:10])
+        $else:
+            $post["content"][0]
+    $elif "like-of" in post:
+        Liked <a href=$post["like-of"][0]>$post["like-of"][0]</a>
+    $elif "bookmark-of" in post:
+        Bookmarked <a href=$post["bookmark-of"][0]>$post["bookmark-of"][0]</a>
+    <small><a class=u-url href=$post["url"][0]>\
+    <time datetime=$post["published"][0].isoformat() \
+    class=dt-published>$post["published"][0].diff_for_humans()</time></a></small>
+    </p>
+</article>

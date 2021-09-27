@@ -1,0 +1,9 @@
+$def with (type, obj)
+
+<p><strong>$type</strong></p>
+
+$if type == "list":
+    <ul>
+    $for item in obj:
+        <li>$item</li>
+    </ul>

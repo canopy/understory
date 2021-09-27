@@ -1,0 +1,17 @@
+$def with (domains)
+$var title: Cache
+
+<form method=post>
+<input name=url type=url placeholder="address of a webpage to cache">
+<button>Cache</button>
+</form>
+
+<ul>
+$for origin, data in domains:
+    <li>
+    $ repr = representative_card(data, origin)
+    $if repr:
+        $repr["name"][0]
+    <small><code><a href=/cache/$origin.netloc>$origin.netloc</a></code></small>
+    </li>
+</ul>

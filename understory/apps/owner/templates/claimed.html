@@ -1,0 +1,18 @@
+$def with (uid, passphrase)
+$var title: Site has been claimed
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  try {
+    window.navigator.registerProtocolHandler(
+      'web+action', '$uid/actions?handler=%s', '$uid'
+    )
+  } catch(err) { // if not in https context
+    // iOS fix
+  }
+})
+</script>
+
+<p>You are now the owner. This is your passphrase. Write it down.</p>
+
+<pre>$" ".join(passphrase)</pre>

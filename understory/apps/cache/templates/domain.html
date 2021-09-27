@@ -1,0 +1,77 @@
+$def with (domain, resources)
+$var breadcrumbs = ("cache", "Cache")
+$var title: $domain
+
+$ root = resources.pop(0)
+<div style="display:grid;grid-template-columns:2.25em auto">
+<div>
+$if "icon" in root["data"]["rels"]:
+    <img src="$root['data']['rels']['icon'][0]" style=height:2em>
+</div>
+<small style=font-size:.8em>$root["title"]<br><a href=$root["origin"]/$root["path"]><code style=font-size:.8em>$domain</code></a></small>
+</div>
+$ repr = representative_card(root["data"], root["origin"])
+$if repr:
+    <div style="display:grid;grid-template-columns:12em auto;margin-top:2em">
+    $if "photo" in repr:
+        <img style=max-width:10em src="$repr['photo'][0]">
+    <div>
+    <h2 style=margin-top:0>$repr["name"][0]</h2>
+    $if "pronoun" in repr:
+        $if isinstance(repr["pronoun"][0], dict):
+            $ pronouns = [p["value"] for p in repr["pronoun"]]
+        $else:
+            $ pronouns = [p for p in repr["pronoun"]]
+        <p><small style=text-transform:uppercase>$:"&thinsp;/&thinsp;".join(pronouns)</small></p>
+    $if "country-name" in repr:
+        <p>
+        $if "region" in repr:
+            $if "locality" in repr:
+                $if "street-address" in repr:
+                    $repr["street-address"][0]<br>
+                $repr["locality"][0],
+            $repr["region"][0],
+        $repr["country-name"][0]
+        $if "postal-code" in repr:
+            $repr["postal-code"][0]
+        </p>
+    $if "note" in repr:
+        <p>$repr["note"][0]</p>
+    $if "org" in repr:
+        <p><small>$repr["org"]</small></p>
+    $if "role" in repr:
+        <p><small>$repr["role"]</small></p>
+    $if "category" in repr:
+        <p><small>$repr["category"]</small></p>
+    $if "nickname" in repr:
+        <p><small>$repr["nickname"][0]</small></p>
+    $if "bday" in repr:
+        <p><small>$repr["bday"][0]</small></p>
+    $if "email" in repr:
+        <p><small><a href=$repr["email"][0]>$repr["email"][0].partition(":")[2]</a></small></p>
+    $if "url" in repr:
+        $ urls = [url for url in repr["url"] if not url.startswith(root["origin"])]
+        $if urls:
+            <ul>
+            $for url in sorted(urls):
+                <li>$url</li>
+            </ul>
+    $ rels = root["data"]["rels"]
+    </div>
+    </div>
+
+<h3>Pages</h3>
+<ul>
+$for resource in resources:
+    $ url = "/".join((resource["origin"], resource["path"]))
+    <li><p><big><code>/$resource["path"]</code></big></p>
+    $for item in resource["data"]["items"]:
+        $if item["type"][0] == "h-entry":
+            $discover_post_type(item["properties"])
+            <pre><small>$pformat(item)</small></pre>
+    </li>
+</ul>
+
+<form method=post>
+<button name=action value=forget>Forget Site</button>
+</form>

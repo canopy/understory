@@ -1,0 +1,23 @@
+$def with (query, results)
+$var breadcrumbs = ("search", "Search")
+$var title: $query &mdash; Search Results
+
+<form>
+<input type=search name=q placeholder="a search query" value="$query">
+<button>Search</button>
+</form>
+
+<dl>
+$for result in results:
+    <dt><strong>$result["origin"]/$result["path"]</strong></dt>
+    $ items = Counter()
+    $ words = query.split()
+    $for index, item in enumerate(result["data"]["items"]):
+        $for word in words:
+            $if word in str(item).lower():
+                $ items[index] += 1
+    <dd>
+    $for index, count in sorted(items.items(), key=lambda i: i[1], reverse=True):
+        <pre>$pformat(result["data"]["items"][index])</pre>
+    </dd>
+</dl>
