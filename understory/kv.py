@@ -63,8 +63,9 @@ class Database:
         d = self.delimiter
         for schema in schemas:
             for key, key_type in schema.items():
-                key_template = d.join(([self.partition] if self.partition
-                                       else []) + [key])
+                key_template = d.join(
+                    ([self.partition] if self.partition else []) + [key]
+                )
                 nskey = key_template.format(**self.patterns).rstrip(d)
                 self.schema.update({nskey: key_type})
 
@@ -108,8 +109,9 @@ class Database:
         return key in self.cursor
 
 
-def db(prefix: str = None, delimiter=":",
-       *schemas, socket=None, **patterns) -> Database:
+def db(
+    prefix: str = None, delimiter=":", *schemas, socket=None, **patterns
+) -> Database:
     """
     Return a connection to a `redis` database.
 
@@ -155,8 +157,7 @@ class Cursor:
     scope = None
 
     def __init__(self, schema, db, delimiter=":"):
-        self.__dict__.update(schema=schema, db=db, args={},
-                             delimiter=delimiter)
+        self.__dict__.update(schema=schema, db=db, args={}, delimiter=delimiter)
 
     def flushall(self):
         """Remove all keys from all databases."""
@@ -168,8 +169,11 @@ class Cursor:
 
     def keys(self):
         """"""
-        return [k[len(self.db_prefix)+1:].decode() for k in self.db.keys()
-                if k.startswith(self.db_prefix.encode("utf-8"))]
+        return [
+            k[len(self.db_prefix) + 1 :].decode()
+            for k in self.db.keys()
+            if k.startswith(self.db_prefix.encode("utf-8"))
+        ]
 
     def random_key(self):
         """"""
@@ -180,8 +184,10 @@ class Cursor:
 
     def transaction(self, handler, *args):
         """"""
+
         def wrapped_handler(pipe):
             return handler(Pipe(self.schema, pipe))
+
         # FIXME _get has since changed
         wrapped_args = [self._get(arg) for arg in args]
         return self.db.transaction(wrapped_handler, *wrapped_args)
@@ -213,9 +219,12 @@ class Cursor:
         return globals()[key_type.lower().capitalize()](self.db, key)
 
     def _gen_key(self, template):
-        parts = [p for p in
-                 ([self.db_prefix] if self.db_prefix else []) +
-                 [self.prefix, self.scope] if p]
+        parts = [
+            p
+            for p in ([self.db_prefix] if self.db_prefix else [])
+            + [self.prefix, self.scope]
+            if p
+        ]
         if isinstance(template, (list, tuple)):
             template = self._delimit(*template)
         for key_template, key_type in self.schema.items():
@@ -259,7 +268,6 @@ class Cursor:
 
 
 class Pipe(Cursor):
-
     def multi(self):
         return self.db.multi()
 
@@ -617,8 +625,9 @@ class Zset(Key):
 
     def zrangebyscore(self, min, max, withscores=True, limit=None):
         """return a range of members in a sorted set, by score"""
-        for item, score in self.db.zrangebyscore(self.key, min, max,
-                                                 withscores=withscores):
+        for item, score in self.db.zrangebyscore(
+            self.key, min, max, withscores=withscores
+        ):
             yield item.decode("utf-8"), score
 
     def zrank(self, key, member):
@@ -643,8 +652,9 @@ class Zset(Key):
     def zrevrangebyscore(self, max, min, withscores=True, limit=None):
         """return a range of members in a sorted set, by score, with
         scores ordered from high to low"""
-        return self.db.zrevrangebyscore(self.key, max, min,
-                                        withscores=withscores, limit=limit)
+        return self.db.zrevrangebyscore(
+            self.key, max, min, withscores=withscores, limit=limit
+        )
 
     def zrevrank(self, key, member):
         """determine the index of a member in a sorted set, with scores
@@ -668,15 +678,14 @@ class Zset(Key):
         return self.zadd(*args, **kwargs)
 
     def __iter__(self):
-        return ((item.decode("utf-8"), score)
-                for item, score in self.zrange(0, -1))
+        return ((item.decode("utf-8"), score) for item, score in self.zrange(0, -1))
 
     def keep_popping(self):
         while True:
             try:
                 item, score = self.zrange(0, 0)[0]
             except IndexError:
-                time.sleep(.1)
+                time.sleep(0.1)
                 continue
             yield item.decode("utf-8"), score
 
@@ -790,8 +799,7 @@ class List(Key):
         """"""
         if isinstance(index, slice):
             start, stop, step = index.indices(len(self))
-            return (item.decode("utf-8")
-                    for item in self.lrange(start, stop)[::step])
+            return (item.decode("utf-8") for item in self.lrange(start, stop)[::step])
         item = self.db.lindex(self.key, index)
         if item is None:
             raise IndexError("list index out of range")
@@ -1175,8 +1183,9 @@ test_server = None
 
 def setup_module(module):
     global test_server
-    test_server = sh.redis_server("--unixsocket", "/tmp/kv-test",
-                                  "--port", "0", _bg=True)
+    test_server = sh.redis_server(
+        "--unixsocket", "/tmp/kv-test", "--port", "0", _bg=True
+    )
     time.sleep(1)
 
 
