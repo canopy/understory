@@ -14,11 +14,6 @@ Issues = "https://github.com/canopy/understory/issues"
 loveliness = "understory.loveliness:main"
 pkg = "understory.pkg.__main__:main"
 web = "understory.web.__main__:main"
-# indieauth = "understory.indieweb.indieauth:main"
-# micropub = "understory.indieweb.micropub:main"
-# microsub = "understory.indieweb.microsub:main"
-# followers = "understory.indieweb.followers:main"
-# mentions = "understory.indieweb.webmention:main"
 
 [tool.poetry.dependencies]
 python = "^3.9,<3.10"
