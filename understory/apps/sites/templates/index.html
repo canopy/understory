@@ -1,0 +1,25 @@
+$def with (machines)
+$var title: Sites
+
+<p>list domains/apps and the machine they're on</p>
+
+$def aside():
+    <p><a href=/sites/providers>Service Providers</a></p>
+    <h4>Machines</h4>
+    <ul id=machines>
+    $for machine in machines:
+        <li><a href=/sites/machines/$machine["name"]>$machine["name"]</a><br>
+        <small>$machine["ip_address"]</small></li>
+    </ul>
+    <form method=post action=/sites/machines>
+    <label><small>Name</small><br>
+    <label class=bounding><input type=text name=name></label></label>
+    <div class=buttons><button>Spawn Machine</button></div>
+    </form>
+$var aside = aside
+
+<style>
+ul#machines {
+  list-style: none;
+  padding-left: 0; }
+</style>

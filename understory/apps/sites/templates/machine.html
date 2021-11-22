@@ -1,0 +1,45 @@
+$def with (machine)
+$var breadcrumbs = ("sites", "Sites", "machines", "Machines")
+$var title: $machine["name"]
+
+<p>$machine["ip_address"]</p>
+
+$ d = machine["details"]
+<p>$d</p>
+
+<p>Last updated: $d.get("updated")</p>
+<form method=post action=/sites/machines/$machine["name"]/update>
+<div class=buttons><button>Update System</button></div>
+</form>
+
+$if d.get("python"):
+    <p>Python: $d["python"]</p>
+$# $else:
+<form method=post action=/sites/machines/$machine["name"]/builds>
+<input type=hidden name=program value=python>
+<div class=buttons><button>Install Python</button></div>
+</form>
+
+$if d.get("nginx"):
+    <p>Nginx: $d["nginx"]</p>
+$# $else:
+<form method=post action=/sites/machines/$machine["name"]/builds>
+<input type=hidden name=program value=nginx>
+<div class=buttons><button>Install Nginx</button></div>
+</form>
+
+$if d.get("supervisor"):
+    <p>Supervisor: $d["supervisor"]</p>
+$# $else:
+<form method=post action=/sites/machines/$machine["name"]/builds>
+<input type=hidden name=program value=supervisor>
+<div class=buttons><button>Install Supervisor</button></div>
+</form>
+
+$if d.get("tor"):
+    <p>Tor: $d["tor"]</p>
+$# $else:
+<form method=post action=/sites/machines/$machine["name"]/builds>
+<input type=hidden name=program value=tor>
+<div class=buttons><button>Install Tor</button></div>
+</form>
