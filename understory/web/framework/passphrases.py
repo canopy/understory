@@ -6,7 +6,11 @@ import pathlib
 import secrets
 
 import Crypto.Random
-import scrypt
+
+try:
+    import scrypt
+except OSError:
+    pass
 
 __all__ = ["generate_passphrase", "verify_passphrase"]
 
