@@ -42,22 +42,7 @@ def from_datetime(val):
     # remove timezone column
     if val[-6] in "-+":
         val = "".join(val.rpartition(":")[::2])
-    date = "YYYY-MM-DD"
-    time = "HH:mm:ss"
-    try:
-        dt = pendulum.from_format(val, f"{date} {time}.SSSSSSZ")
-    except ValueError:
-        try:
-            dt = pendulum.from_format(val, f"{date} {time}.SSSSSS")
-        except ValueError:
-            try:
-                dt = pendulum.from_format(val, f"{date} {time}Z")
-            except ValueError:
-                try:
-                    dt = pendulum.from_format(val, f"{date} {time}")
-                except ValueError:
-                    dt = pendulum.from_format(val, date)
-    return dt
+    return pendulum.parse(val)
 
 
 sqlite3.register_converter("DATETIME", from_datetime)
@@ -83,39 +68,13 @@ def from_json(val):
                 val = item
             if val[-6] in "-+":
                 val = "".join(val.rpartition(":")[::2])
-            val = val.strip()
-            f1 = "YYYY-MM-DDTHH:mm:ss"
-            f2 = "YYYY-MM-DD HH:mm:ss"
-            f3 = "YYYY-MM-DDTHH:mm"
-            f4 = "YYYY-MM-DD HH:mm"
-            f5 = "YYYY-MM-DD"
             try:
-                dt = pendulum.from_format(val, f"{f1}.SSSSSSZ")
-            except ValueError:
-                try:
-                    dt = pendulum.from_format(val, f"{f1}Z")
-                except ValueError:
-                    try:
-                        dt = pendulum.from_format(val, f"{f2}.SSSSSSZ")
-                    except ValueError:
-                        try:
-                            dt = pendulum.from_format(val, f"{f2}Z")
-                        except ValueError:
-                            try:
-                                dt = pendulum.from_format(val, f"{f3}.SSSSSSZ")
-                            except ValueError:
-                                try:
-                                    dt = pendulum.from_format(val, f"{f3}Z")
-                                except ValueError:
-                                    try:
-                                        dt = pendulum.from_format(val, f"{f4}.SSSSSSZ")
-                                    except ValueError:
-                                        try:
-                                            dt = pendulum.from_format(val, f"{f4}Z")
-                                        except ValueError:
-                                            dt = pendulum.from_format(val, f"{f5}")
-            if tz:
-                dt = dt.astimezone(pendulum.timezone(tz))
+                dt = pendulum.parse(val.strip())
+            except pendulum.exceptions.ParserError:
+                dt = "?"
+            else:
+                if tz:
+                    dt = dt.astimezone(pendulum.timezone(tz))
             dct[key] = [dt]
 
         upgrade_date("published")
@@ -145,6 +104,7 @@ class Model:
 
     def control(self, controller):
         self.controllers[controller.__name__] = controller
+        return controller
 
     def __call__(self, db):
         return ModelController(self.controllers, db)
@@ -237,9 +197,13 @@ class Database:
             pass
         else:
             icuext_path = get_icu()
-            conn.load_extension(str(icuext_path))
-            conn.enable_load_extension(False)
-            conn.execute("SELECT icu_load_collation('en_US', 'UNICODE');")
+            try:
+                conn.load_extension(str(icuext_path))
+            except sqlite3.OperationalError:
+                pass  # TODO make ICU available for all platforms
+            else:
+                conn.enable_load_extension(False)
+                conn.execute("SELECT icu_load_collation('en_US', 'UNICODE');")
         conn.row_factory = sqlite3.Row
         # conn.execute("PRAGMA user_version")
         self.conn = conn
@@ -355,7 +319,7 @@ def db(path, *models) -> Database:
             current_version = current_models[model.name]
         except KeyError:  # doesn't exist, create all tables in model
             for table, schema in model.schemas.items():
-                fts = schema.pop("FTS", False)
+                fts = schema.get("FTS", False)
                 if fts:
                     dbi.create(
                         table,

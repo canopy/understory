@@ -1,0 +1,39 @@
+$def with (module, object, callable, job, runs, total)
+$var breadcrumbs = ("jobs", "Jobs", module, module, object, object)
+$var title: $module:$object
+$var subtitle: <code><strong>$job["arghash"][:16]</strong> $job["arghash"][16:]</code>
+
+<p>$total total runs.</p>
+
+<ul>
+$for run in runs:
+    <li>
+    <p>Created: <time datetime=$run["created"]>$run["created"]</time>
+    <br>Started: <time datetime=$run["started"]>$run["started"]</time>
+    $if run["finished"]:
+        <br>Finished: <time datetime=$run["finished"]>$run["finished"]</time>
+    </p>
+    $if not run["finished"]:
+        <form method=post action=/jobs>
+        <button>Cancel</button>
+        </form>
+    <small><a href=/jobs/$module/$object/\
+    $job["arghash"][:16]/$run["job_id"]>$run["job_id"]</a></small>
+    </li>
+</ul>
+
+$def aside():
+    $ args = load_json(job["args"])
+    $ kwargs = load_json(job["kwargs"])
+
+    <ol>
+    $for arg in args:
+        <li>$arg</li>
+    </ol>
+
+    <dl>
+    $for key, val in kwargs:
+        <dt>$key</dt>
+        <dd>$val</dd>
+    </dl>
+$var aside = aside

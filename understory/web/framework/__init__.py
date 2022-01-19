@@ -43,6 +43,7 @@ import sh
 import unidecode
 import watchdog.events
 import watchdog.observers
+from rich.console import Console
 from understory import term  # noqa NOTE to colorize print()
 from understory import kv, mm, sql
 from understory.mm import Template
@@ -57,6 +58,8 @@ from .letsencrypt import generate_cert
 from .newmath import nb60_re, nbdecode, nbencode, nbrandom
 from .passphrases import generate_passphrase, verify_passphrase
 from .util import JSONEncoder, add_rel_links, header, json, shift_headings, tx
+
+console = Console()
 
 warnings.simplefilter("ignore")
 
@@ -644,16 +647,11 @@ class Application:
         if args:
             self.add_path_args(**args)
         self.mounts = []
-        if mounts:
-            self.mount(*mounts)
         self.controllers = []  # TODO use ordered dict
 
+        if mounts:
+            self.mount(*mounts)
         if db:
-            models = [sessions_model] + [
-                app.model for _, app in self.mounts if getattr(app, "model", None)
-            ]
-            # XXX for site_db in pathlib.Path().glob("site-*.db"):
-            # XXX     sql.db(site_db, *models)
 
             def set_data_sources(handler, app):
                 tx.host.kv = kv.db(tx.request.uri.host, ":", {"jobs": "list"})
@@ -662,10 +660,18 @@ class Application:
                 tx.host.cache = cache(db=cache_db)
                 yield
 
-            self.add_wrappers(set_data_sources)
-            self.add_wrappers(resume_session)
+            self.wrappers.insert(0, resume_session)  # 2nd position
+            self.wrappers.insert(0, set_data_sources)  # 1st position
+            models = [sessions_model] + [
+                app.model for _, app in self.mounts if getattr(app, "model", None)
+            ]
+            # XXX for site_db in pathlib.Path().glob("site-*.db"):
+            # XXX     sql.db(site_db, *models)
         if wrappers:
             self.add_wrappers(*wrappers)
+        # for _, mounted_app in self.mounts:
+        #     self.add_wrappers(*mounted_app.wrappers)
+        #     mounted_app.wrappers = []
 
         if model:
             self.model = sql.model(name, **model)
@@ -731,6 +737,9 @@ class Application:
 
     def add_wrappers(self, *wrappers):
         self.wrappers.extend(wrappers)
+
+    # XXX def add_controller(self, *wrappers):
+    # XXX     self.wrappers.extend(wrappers)
 
     def add_path_args(self, **path_args):
         self.path_args.update(
@@ -886,6 +895,9 @@ class Application:
                     next(hook)
                 except StopIteration:
                     pass
+                except Exception:
+                    console.print_exception(show_locals=True)
+                    raise
 
         try:
             tx.request.controller = self.get_controller(path)
@@ -934,6 +946,7 @@ class Application:
         except Exception:
             if os.getenv("PYTEST_CURRENT_TEST"):
                 raise
+            console.print_exception(show_locals=True)
             tx.response.status = "500 Internal Server Error"
             tx.response.headers.content_type = "text/html"
             if getattr(tx.user, "is_owner", False):
@@ -960,42 +973,49 @@ class Application:
         if duration < 0.1:
             pass
         elif duration < 0.5:
-            duration_color = "y"
+            duration_color = "yellow"
         else:
-            duration_color = "r"
+            duration_color = "red"
         duration = f"{duration:.3f}"
         if duration_color:
-            duration = f"/{duration_color}/{duration}/X/"
+            duration = f"[{duration_color}]{duration}[/{duration_color}]"
 
         status = tx.response.status.partition(" ")[0]
         status_color = None
         if status.startswith("3"):
-            status_color = "c"
+            status_color = "cyan"
         elif status.startswith("4"):
-            status_color = "m"
+            status_color = "magenta"
         elif status.startswith("5"):
-            status_color = "r"
+            status_color = "red"
         if status_color:
-            status = f"/{status_color}/{status}/X/"
+            status = f"[{status_color}]{status}[/{status_color}]"
 
         method = tx.request.method
         host = tx.request.uri.host
         resource = tx.request.uri.path
-        if tx.request.uri.query:
-            resource += f"?{tx.request.uri.raw_query}"
-        print(f"{duration} {status} {method: >6} {host}/{resource}")
+        console.print(f"{duration} {status} {method: >6} {host}/{resource}")
+        for k, v in sorted(tx.request.uri.query.items()):
+            console.print(f"    {k}: {v[0]}")
+
+        if isinstance(tx.response.body, mm.templating.TemplateResult):
+            pass
+        elif isinstance(tx.response.body, dict):
+            header("Content-Type", "application/json")
 
         try:
             start_response(tx.response.status, tx.response.headers.wsgi)
         except OSError:  # websocket connection broken
             # TODO close websocket connection?
             return []
+
         if getattr(tx.response, "naked"):  # causes low-level gunicorn error
             return tx.response.body
         elif isinstance(tx.response.body, bytes):
             return [tx.response.body]
-        elif tx.response.headers.get("content-type") == "application/json":
-            # XXX return [bytes(json.dumps(tx.response.body), "utf-8")]
+        elif isinstance(tx.response.body, mm.templating.TemplateResult):
+            pass
+        elif isinstance(tx.response.body, dict):
             return [bytes(JSONEncoder().encode(tx.response.body), "utf-8")]
         return [bytes(str(tx.response.body), "utf-8")]
 
@@ -1019,7 +1039,7 @@ class Application:
 
         class ResourceNotFound(Resource):
             def get(inner_self):
-                raise NotFound("Resource not found")
+                raise NotFound("Resource not found")  # TODO XXX
                 error = self.view.error
                 # TODO recursively ascend app ancestors
                 # try:
@@ -1054,6 +1074,7 @@ class Application:
                 for k, v in m.groupdict().items():
                     setattr(controller, k, v)
                 return controller
+        return ResourceNotFound()
 
     def get_handler(self, controller, method="get"):
         method = method.lower()
@@ -1169,11 +1190,10 @@ def resume_session(handler, app):
         )
 
 
-# TODO roles eg. owner, guest (personal context) && admin, user (service)
-def require_auth(*roles):
+def require_auth(*allowed_roles):
     def decorate(func):
         def handler(*args, **kwargs):
-            if tx.user.session["role"] not in roles:  # TODO role -> roles
+            if tx.user.session["role"] not in allowed_roles + ("owner",):
                 raise Unauthorized("no auth to access this resource")
             return func(*args, **kwargs)
 

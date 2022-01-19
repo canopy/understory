@@ -1,0 +1,41 @@
+$def with (active, finished)
+$var breadcrumbs = ("jobs", "Jobs")
+$var title: Jobs
+
+$def render_job(job):
+    $ args = load_json(job["args"])
+    $ kwargs = load_json(job["kwargs"])
+    <a href=/jobs/$job["module"]/$job["object"]/$job["arghash"][:16]/$job["job_id"]><code>\
+    $job["module"]:${job["object"]}\
+    $for arg in args:
+        <br><span title="$type(arg)">$arg</span>\
+    $for k, v in kwargs.items():
+        <br><span title="$type(v)">$k=$v</span>\
+    </code></a>
+
+<h2>Finished</h2>
+$if finished:
+    <ul>
+    $for job in finished:
+        <li><p>
+        $:render_job(job)<br>
+        <small>$job["finished"].diff_for_humans(),
+        took $job["run_time"] seconds</small>
+        </p></li>
+    </ul>
+$else:
+    <p>no finished jobs</p>
+
+$def aside():
+    <h2>Active</h2>
+    $if active:
+        <ul>
+        $for job in active:
+            <li>
+            $:render_job(job)
+            <p><small>$job["created"], $job["started"]</small></p>
+            </li>
+        </ul>
+    $else:
+        <p>no active jobs</p>
+$var aside = aside

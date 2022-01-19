@@ -17,7 +17,12 @@ try:
 except ImportError:
     pass
 
-from . import digitalocean  # , dynadot
+from . import digitalocean, providers
+
+
+class TokenError(Exception):
+    """Bad Dynadot auth token."""
+
 
 __all__ = ["digitalocean", "dynadot", "Gaea", "main", "spawn_gaea", "spawn_understory"]
 
@@ -74,6 +79,8 @@ APTITUDE_PACKAGES = (
     "x11-utils",  # browser automation
     "libenchant-dev",  # pyenchant => sopel => bridging IRC
     "tmux",  # automatable terminal multiplexer
+    "tree",
+    "htop",
     "stow",  # for dotfiles
     "zsh",  # default shell
 )
@@ -84,7 +91,7 @@ VERSIONS = {
     "firefox": "82.0",
     "geckodriver": "0.27.0",
 }
-# templates = web.templates(__name__)
+templates = web.templates(__name__)
 
 
 # def spawn_gaea(ip_address):
@@ -129,6 +136,10 @@ def spawn_machine(name, digitalocean_token):
         if ip_details["type"] == "public":
             ip_address = ip_details["ip_address"]
             break
+    return ip_address
+
+
+def setup_machine(ip_address):
     ssh = digitalocean.get_ssh("root", ip_address, process_out(ip_address))
     upgrade_system(ip_address)
     install_packages(ip_address, *APTITUDE_PACKAGES)
@@ -140,7 +151,6 @@ def spawn_machine(name, digitalocean_token):
     ssh(f"cp /root/.ssh/authorized_keys {gaea_ssh_dir}")
     ssh(f"chown gaea:gaea {gaea_ssh_dir} -R")
     ssh("mkdir /root/src /root/etc")
-    return ip_address
 
 
 def upgrade_system(ip_address):
@@ -224,9 +234,16 @@ def setup_python(ip_address):
     )
     return version
 
-    if self.env_dir.exists():
-        return
+
+def setup_canopy(ip_address):
+    ssh = digitalocean.get_ssh("root", ip_address, process_out(ip_address))
     log("creating primary virtual environment")
+    ssh("/root/python/bin/python3 -m venv /root/canopy")
+    return
+
+    # if self.env_dir.exists():
+    #     return
+    # log("creating primary virtual environment")
     get_python_sh()("-m", "venv", self.env_dir)
     sh.echo(
         textwrap.dedent(
@@ -313,10 +330,8 @@ def setup_nginx(ip_address):
         f"--prefix={nginx_dir}",
     )
     ssh(f"mkdir -p {nginx_dir}/conf/conf.d")
-    # if not (self.nginx_dir / "conf/dhparam.pem").exists():
-    web.enqueue(generate_dhparam, ip_address)
-    # with (self.nginx_dir / "conf/nginx.conf").open("w") as fp:
-    #     fp.write(templates.nginx())
+    # XXX web.enqueue(generate_dhparam, ip_address)
+    ssh("cat > /root/nginx/conf/nginx.conf", stdin=str(templates.nginx()))
     return version
 
 
@@ -328,6 +343,7 @@ def generate_dhparam(ip_address):
     administrator to regenerate a cloned system's dhparam.
 
     """
+    # if not (self.nginx_dir / "conf/dhparam.pem").exists():
     log("generating a large prime for TLS..")
     ssh = digitalocean.get_ssh("root", ip_address, process_out(ip_address))
     ssh(f"openssl dhparam -out {nginx_dir}/conf/dhparam.pem {DHPARAM_BITS}")
@@ -357,15 +373,16 @@ def setup_supervisor(ip_address):
     # TODO                               "stopsignal": "INT",
     # TODO                               "user": "gaea"}
     _write_supervisor_conf(ip_address, "servers", supervisor)
+    return True
 
 
 def _write_supervisor_conf(ip_address, name, config):
-    ssh = digitalocean.get_ssh("root", ip_address, process_out(ip_address))
+    ssh = digitalocean.get_ssh("root", ip_address)
     conf_path = f"{etc_dir}/{name}.conf"
     output = io.StringIO()
     config.write(output)
     ssh(f"cat > {conf_path}", stdin=output.getvalue())
-    ssh("ln", "-sf", conf_path, f"/etc/supervisor/conf.d/{name}.conf")
+    ssh(f"ln -sf {conf_path} /etc/supervisor/conf.d/{name}.conf")
     ssh("supervisorctl", "reread")
     ssh("supervisorctl", "update")
 
@@ -373,7 +390,8 @@ def _write_supervisor_conf(ip_address, name, config):
 def setup_tor(ip_address):
     """Install Tor for anonymous hosting."""
     ssh = digitalocean.get_ssh("root", ip_address)
-    tor_dir = f"tor-{VERSIONS['tor']}"
+    version = VERSIONS["tor"]
+    tor_dir = f"tor-{version}"
     if ssh(f"test -f {src_dir}/{tor_dir}").returncode == 0:
         return
     _build(
@@ -382,6 +400,7 @@ def setup_tor(ip_address):
         f"--prefix={system_dir}",
     )
     ssh(f"mkdir -p {var_dir}/tor")
+    return version
 
 
 # def spawn_local():

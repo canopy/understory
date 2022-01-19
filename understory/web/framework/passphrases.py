@@ -1,16 +1,12 @@
 """Passphrase functionality."""
 
+import hashlib
 import hmac
 import json
 import pathlib
 import secrets
 
 import Crypto.Random
-
-try:
-    import scrypt
-except OSError:
-    pass
 
 __all__ = ["generate_passphrase", "verify_passphrase"]
 
@@ -36,8 +32,13 @@ def generate_passphrase():
         passphrase_words.append(random.choice(wordlist))
     passphrase = "".join(passphrase_words)
     salt = Crypto.Random.get_random_bytes(64)
-    scrypt_hash = scrypt.hash(passphrase, salt)
-    return salt, scrypt_hash, passphrase_words
+    return (
+        salt,
+        hashlib.scrypt(
+            passphrase.encode("utf-8"), salt=salt, n=2048, r=8, p=1, dklen=32
+        ),
+        passphrase_words,
+    )
 
 
 def verify_passphrase(salt, scrypt_hash, passphrase):
@@ -47,4 +48,9 @@ def verify_passphrase(salt, scrypt_hash, passphrase):
     `passphrase` should be concatenation of generated words, without spaces
 
     """
-    return hmac.compare_digest(scrypt.hash(passphrase, salt), scrypt_hash)
+    return hmac.compare_digest(
+        hashlib.scrypt(
+            passphrase.encode("utf-8"), salt=salt, n=2048, r=8, p=1, dklen=32
+        ),
+        scrypt_hash,
+    )

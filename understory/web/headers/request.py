@@ -182,6 +182,9 @@ class Authorization(Request):
 
     """"""
 
+    def __str__(self):
+        return self.header.removeprefix("Bearer ")
+
     _meta = ""
 
 

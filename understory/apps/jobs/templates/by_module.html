@@ -1,0 +1,8 @@
+$def with (module, jobs)
+$var breadcrumbs = ("jobs", "Jobs")
+$var title: $module
+
+<ul>
+$for job in jobs:
+    <li><a href=/jobs/$module/$job["object"]>$job["object"]</a></li>
+</ul>

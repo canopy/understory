@@ -1,0 +1,38 @@
+$def with (schedules)
+$var breadcrumbs = ("system", "System", "jobs", "Jobs")
+$var title: Schedules
+
+$def humanize(s):
+    $ min = s["minute"]
+    $ hr = s["hour"]
+    $ day = s["day_of_month"]
+    $ mon = s["month"]
+    $ dow = s["day_of_week"]
+    <abbr title="$min $hr $day $mon $dow">
+    $if min == "*":
+        every minute
+    $if "/" in min:
+        every $min.partition("/")[2] minutes
+    $# $if hr == "*":
+    $#     every hour
+    $# $if day == "*" and dow == "*":
+    $#     every day
+    $# $if mon == "*":
+    $#     every month
+    </abbr>
+
+<ul>
+$for schedule in schedules:
+    <li><a
+    href=$schedule["module"]/$schedule["object"]>$schedule["object"]</a><br>
+    <small><a href=$schedule["module"]>$schedule["module"]</a></small><br>
+    $if schedule["args"] != "[]" or schedule["kwargs"] != "{}":
+        <small>\
+        $if schedule["args"] != "[]":
+            $schedule["args"]<br>
+        $if schedule["kwargs"] != "{}":
+            $schedule["kwargs"]<br>
+        </small>
+    $:humanize(schedule)
+    </li>
+</ul>

@@ -1,5 +1,10 @@
 # understory
-Web framework with IndieWeb support
+
+Social web framework
+
+## A basic website
+
+
 
 ## An IndieWeb-compatible personal website
 

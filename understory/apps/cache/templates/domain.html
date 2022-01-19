@@ -3,6 +3,9 @@ $var breadcrumbs = ("cache", "Cache")
 $var title: $domain
 
 $ root = resources.pop(0)
+<pre>$pformat(root['data']['rels'])</pre>
+$if "alternates" in root["data"]:
+    <pre>$pformat(root['data']['alternates'])</pre>
 <div style="display:grid;grid-template-columns:2.25em auto">
 <div>
 $if "icon" in root["data"]["rels"]:

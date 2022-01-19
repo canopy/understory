@@ -1,0 +1,37 @@
+$def with (module, object, callable, job, run)
+$ shorthash = job["arghash"][:16]
+$var breadcrumbs = ("jobs", "Jobs", module, module, object, object, shorthash, shorthash)
+$var title: $module:$object
+$var subtitle: <code><strong>$shorthash</strong>$job["arghash"][16:] : $run["job_id"]</code>
+
+$ args = load_json(job["args"])
+$ kwargs = load_json(job["kwargs"])
+
+<ol>
+$for arg in args:
+    <li>$arg</li>
+</ol>
+
+<dl>
+$for key, val in kwargs:
+    <dt>$key</dt>
+    <dd>$val</dd>
+</dl>
+
+$if run["status"]:
+    <p>Error code <code>$run["status"]</code></p>
+<pre>$run["output"]</pre>
+
+$def aside():
+    <p>Created: $run["created"].diff_for_humans()
+    $ duration = run["started"] - run["created"]
+    <br>Started: $run["started"].diff_for_humans() <small>in $(duration.seconds).$duration.microseconds seconds</small>
+    $if run["finished"]:
+        $ duration = run["finished"] - run["started"]
+        <br>Finished: $run["finished"].diff_for_humans() <small>in $(duration.seconds).$duration.microseconds seconds</small>
+    </p>
+    $if not run["finished"]:
+        <form method=post action=/jobs>
+        <button>Cancel</button>
+        </form>
+$var aside = aside

@@ -1,4 +1,4 @@
-$def with (machine)
+$def with (machine, domains)
 $var breadcrumbs = ("sites", "Sites", "machines", "Machines")
 $var title: $machine["name"]
 
@@ -12,34 +12,60 @@ $ d = machine["details"]
 <div class=buttons><button>Update System</button></div>
 </form>
 
-$if d.get("python"):
-    <p>Python: $d["python"]</p>
-$# $else:
-<form method=post action=/sites/machines/$machine["name"]/builds>
-<input type=hidden name=program value=python>
-<div class=buttons><button>Install Python</button></div>
-</form>
+$if d.get("supervisor"):
+    <p>Supervisor: $d["supervisor"]</p>
+$else:
+    <form method=post action=/sites/machines/$machine["name"]/builds>
+    <input type=hidden name=program value=supervisor>
+    <div class=buttons><button>Install Supervisor</button></div>
+    </form>
 
 $if d.get("nginx"):
     <p>Nginx: $d["nginx"]</p>
-$# $else:
-<form method=post action=/sites/machines/$machine["name"]/builds>
-<input type=hidden name=program value=nginx>
-<div class=buttons><button>Install Nginx</button></div>
-</form>
-
-$if d.get("supervisor"):
-    <p>Supervisor: $d["supervisor"]</p>
-$# $else:
-<form method=post action=/sites/machines/$machine["name"]/builds>
-<input type=hidden name=program value=supervisor>
-<div class=buttons><button>Install Supervisor</button></div>
-</form>
+$else:
+    <form method=post action=/sites/machines/$machine["name"]/builds>
+    <input type=hidden name=program value=nginx>
+    <div class=buttons><button>Install Nginx</button></div>
+    </form>
 
 $if d.get("tor"):
     <p>Tor: $d["tor"]</p>
-$# $else:
-<form method=post action=/sites/machines/$machine["name"]/builds>
-<input type=hidden name=program value=tor>
-<div class=buttons><button>Install Tor</button></div>
-</form>
+$else:
+    <form method=post action=/sites/machines/$machine["name"]/builds>
+    <input type=hidden name=program value=tor>
+    <div class=buttons><button>Install Tor</button></div>
+    </form>
+
+$if d.get("python"):
+    <p>Python: $d["python"]</p>
+$else:
+    <form method=post action=/sites/machines/$machine["name"]/builds>
+    <input type=hidden name=program value=python>
+    <div class=buttons><button>Install Python</button></div>
+    </form>
+
+<hr>
+
+$if d.get("canopy"):
+    <p>Canopy: $d["canopy"]</p>
+    <h4>Identities</h4>
+    $# <ul id=domains>
+    $# $for domain in domains:
+    $#     <li><a href=/sites/domains/$domain["name"]>$domain["name"]</a><br>
+    $#     <small>$domain</small></li>
+    $# </ul>
+    <form method=post>
+    <label><small>Address</small><br>
+    <label class=bounding><input type=radio> <input type=text
+    name=subdomain>&thinsp;.&thinsp;<select name=name>
+    $for domain, expiration in domains:
+        <option value="$domain">$domain</option>
+    </select></label></label>
+    <label class=bounding><input type=radio> onion</label>
+    <div class=buttons><button>Add Identity</button></div>
+    </form>
+$else:
+    <form method=post action=/sites/machines/$machine["name"]/builds>
+    <input type=hidden name=program value=canopy>
+    <div class=buttons><button>Install Canopy</button></div>
+    </form>

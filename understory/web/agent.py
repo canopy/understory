@@ -2,21 +2,23 @@
 
 import datetime
 import json
+import pathlib
 import re
 import time
 
 import lxml.html
-import networkx as nx
+import microformats as mf
 import pyscreenshot
 import pyvirtualdisplay
 import requests
 import selenium
+from requests.exceptions import ConnectionError, SSLError
 from selenium import webdriver
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions
 from selenium.webdriver.support.ui import WebDriverWait
-from understory import mf, solarized, sql, uri, web
+from understory import solarized, sql, uri, web
 
 __all__ = [
     "post",
@@ -29,12 +31,14 @@ __all__ = [
     "cache",
     "discover_link",
     "download",
+    "ConnectionError",
+    "SSLError",
 ]
 
 displays = []
 browsers = []
 
-tor_proxies = {"http": "socks5h://localhost:9050", "https": "socks5h://localhost:9050"}
+tor_proxies = {"http": "socks5h://localhost:9150", "https": "socks5h://localhost:9150"}
 
 
 def discover_link(target, name):
@@ -45,7 +49,7 @@ def discover_link(target, name):
 
     """
     try:
-        response = web.tx.cache[target]
+        _, response = web.tx.cache[target]
     except AttributeError:
         response = get(target)
     try:
@@ -80,7 +84,7 @@ def _get_header_link(headers: dict, search_rel: str):
 def download(url, filepath, chunk_size=1024):
     """Download url to filepath."""
     response = request("GET", url, stream=True)
-    with filepath.open("wb") as fp:
+    with pathlib.Path(filepath).open("wb") as fp:
         for chunk in response.iter_content(chunk_size=chunk_size):
             if chunk:
                 fp.write(chunk)
@@ -244,13 +248,13 @@ class Cache:
             order="path ASC",
         )
 
-    @property
-    def graph(self):
-        network = nx.DiGraph()
-        for url, resource in self.cache.items():  # TODO iterate over database items
-            # print(resource.links)
-            network.add_node(url)
-        return nx.draw(network, with_labels=True)
+    # XXX @property
+    # XXX def graph(self):
+    # XXX     network = nx.DiGraph()
+    # XXX     for url, resource in self.cache.items():  # TODO iterate over db items
+    # XXX         # print(resource.links)
+    # XXX         network.add_node(url)
+    # XXX     return nx.draw(network, with_labels=True)
 
     def _make_url(self, url):
         if self.origin:
@@ -499,11 +503,11 @@ class Firefox:
             display.start()
             displays.append(display)
         profile = webdriver.FirefoxProfile()
-        profile.add_extension(
-            extension="/home/gaea/canopy/var/identities/"
-            "6c189616-4fe1-4f3f-84dc-c4a13ee9b155/"
-            "asteria/asteria-dev.xpi"
-        )
+        # profile.add_extension(
+        #     extension="/home/gaea/canopy/var/identities/"
+        #     "6c189616-4fe1-4f3f-84dc-c4a13ee9b155/"
+        #     "asteria/asteria-dev.xpi"
+        # )
         binary = "/home/gaea/firefox/firefox-bin"
         self.browser = webdriver.Firefox(firefox_profile=profile, firefox_binary=binary)
         count = len(browsers)

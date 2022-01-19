@@ -11,6 +11,11 @@ model = sql.model(
         "ip_address": "TEXT UNIQUE",
         "details": "JSON",
     },
+    domains={
+        "name": "TEXT UNIQUE",
+        "nameserver": "TEXT UNIQUE",
+        "details": "JSON",
+    },
 )
 app = web.application(
     __name__,
@@ -54,7 +59,12 @@ class Providers:
             )[0]
         except IndexError:
             host = None
-        registrar = None
+        try:
+            registrar = tx.db.select(
+                "providers", where="service = ?", vals=["dynadot.com"]
+            )[0]
+        except IndexError:
+            registrar = None
         return app.view.providers(host, registrar)
 
 
@@ -72,14 +82,18 @@ class MachineHost:
         return "deleted"
 
 
-@app.control("providers/registar")
+@app.control("providers/registrar")
 class DomainRegistrar:
     """Manage your domain registrar."""
 
     def post(self):
         form = web.form("service", "token")
-        print(form)
+        tx.db.insert("providers", service=form.service, token=form.token)
         return "token has been set"
+
+    def delete(self):
+        tx.db.delete("providers", where="service = ?", vals=["dynadot.com"])
+        return "deleted"
 
 
 @app.control("machines")
@@ -104,9 +118,15 @@ class Machine:
 
     def get(self):
         machine = tx.db.select("machines", where="name = ?", vals=[self.machine])[0]
+        try:
+            token = get_dynadot_token(tx.db)
+        except IndexError:
+            domains = None
+        else:
+            domains = host.dynadot.Client(token).list_domain()
         # ssh = host.digitalocean.get_ssh("root", machine["ip_address"])
         # ls = ssh("ls -la /etc")
-        return app.view.machine(machine)  # , ls)
+        return app.view.machine(machine, domains)  # , ls)
 
 
 @app.control("machines/{machine}/update")
@@ -159,3 +179,8 @@ class Domain:
     def get(self):
         domain = tx.db.select("domains", where="name = ?", vals=[self.domain_name])[0]
         return app.view.domain(domain)
+
+
+@model.control
+def get_dynadot_token(db):
+    return db.select("providers", where="service = ?", vals=["dynadot.com"])[0]["token"]

@@ -42,21 +42,25 @@ def header(name, value, add=False):
         tx.response.headers[name] = value
 
 
+def make_absolute(path):
+    return f"{tx.origin}{path}"
+
+
 def add_rel_links(**rels):
     """"""
     if not tx.response.body:
         return
-    doc = parse(tx.response.body)
     try:
+        doc = parse(tx.response.body)
         head = doc.select("head")[0]
     except IndexError:
         pass
     else:
         for rel, value in rels.items():
-            head.append(f"<link rel={rel} href={value}>")
+            head.append(f"<link rel={rel} href={make_absolute(value)}>")
         tx.response.body = doc.html
     for rel, value in rels.items():
-        header("Link", f'<{value}>; rel="{rel}"', add=True)
+        header("Link", f'<{make_absolute(value)}>; rel="{rel}"', add=True)
 
 
 class JSONEncoder(json.JSONEncoder):
@@ -156,7 +160,10 @@ class RequestBody:
         return {k: self[k] for k in self._data.keys()}
 
     def get(self, name, default=None):
-        return self._data.getfirst(name, default)
+        try:
+            return self._data.getfirst(name, default)
+        except AttributeError:
+            return self._data.get(name, default)
 
     def get_list(self, name):
         return self._data.getlist(name)
@@ -175,6 +182,11 @@ class Response(Context):
         self.naked = False
 
 
+class Model(Context):
+    def _contextualize(self):
+        pass
+
+
 class Log(Context):
     def _contextualize(self):
         self.messages = []
@@ -190,6 +202,7 @@ class Transaction:
     request = Request()
     response = Response()
     log = Log()
+    m = Model()
 
     @property
     def app(self):
@@ -203,9 +216,9 @@ class Transaction:
     # def owner(self):
     #     return self.request.uri.host
 
-    @property
-    def is_owner(self):
-        return self.owner == self.user.session.get("me")
+    # XXX @property
+    # XXX def is_owner(self):
+    # XXX     return self.owner == self.user.session.get("me")
 
     @property
     def db(self):

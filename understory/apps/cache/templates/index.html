@@ -1,10 +1,12 @@
 $def with (domains)
 $var title: Cache
 
-<form method=post>
-<input name=url type=url placeholder="address of a webpage to cache">
-<button>Cache</button>
-</form>
+$def aside():
+    <form method=post>
+        <label class=bounding><input name=url type=url placeholder="ie. address of webpage to cache"></label>
+        <button>Cache</button>
+    </form>
+$var aside = aside
 
 <ul>
 $for origin, data in domains:

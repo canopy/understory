@@ -443,6 +443,16 @@ class Tag(Inline):
         # return E.A(tag, E.CLASS("p-category"), href=f"/tags/{tag}")
 
 
+class PythonFunc(Inline):
+
+    """ """
+
+    pattern = r"""\$\{(?P<function>[A-Za-z0-9.'"\(\),]+)\}"""
+
+    def parse(self, match):
+        return eval(match.group("function"), self.parser.globals)
+
+
 # ----------------------------------------------------------------------
 
 
@@ -1133,6 +1143,7 @@ inline_elements = [  # "SmartQuotes",
     WikiLink,
     Mention,
     Tag,
+    PythonFunc,
     # "Ampersand", "Copyright", "Ellipsis", "LigatureAE",
     #    "Heart",
     # "QuotationDash", "DblEmDash",
@@ -1236,7 +1247,7 @@ def postprocess_script_style_pre_textarea_code(html):
 class Document:
     """A Markdown parser."""
 
-    def __init__(self, text, context=None):
+    def __init__(self, text, context=None, globals=None):
         """Return a  after parsing the Markdown text."""
         self.abbrs = {}
         self.refs = {}
@@ -1245,6 +1256,7 @@ class Document:
         self.at_mentions = []
         self.mentioned_urls = []
         self.context = context
+        self.globals = globals if globals else {}
         self.process(text)
 
     def process(self, mahna):  # , options=None):

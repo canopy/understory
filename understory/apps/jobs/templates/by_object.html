@@ -1,0 +1,31 @@
+$def with (module, object, callable, jobs)
+$var breadcrumbs = ("jobs", "Jobs", module, module)
+$var title = object
+
+$ short_desc, long_desc = get_doc(callable)
+
+<div class=shortdesc>
+$:mkdn(short_desc)
+</div>
+
+<div class=longdesc>
+$:mkdn(long_desc)
+</div>
+
+<style>
+.shortdesc {
+    font-size: 1.25em; }
+</style>
+
+<ul>
+$for job in jobs:
+    $ args = load_json(job["args"])
+    $ kwargs = load_json(job["kwargs"])
+    $ shorthash = job["arghash"][:16]
+    <li>
+    $if args:
+        $", ".join(args)
+    $if kwargs:
+        $kwargs
+    <small><a href=/jobs/$module/$object/$shorthash>$shorthash</a></small></li>
+</ul>

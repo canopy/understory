@@ -13,6 +13,10 @@ import urllib.request
 # XXX                "root@server.name")
 
 
+class TokenError(Exception):
+    """Bad token."""
+
+
 class DomainExistsError(Exception):
     """Domain already exists."""
 
@@ -83,14 +87,21 @@ def get_ssh(user, ip_address, output_handler=None):
             ],
             **kwargs,
         ) as process:
+            # TODO make explicit stdout/stderr
             if stdin:
-                for line in process.communicate(input=stdin.encode("utf-8"))[0].decode(
-                    "utf-8"
-                ):
-                    if output_handler:
-                        output_handler(line)
-                    else:
-                        print(line)
+                try:
+                    for line in process.communicate(
+                        input=stdin.encode("utf-8"), timeout=3
+                    )[0].decode("utf-8"):
+                        if output_handler:
+                            output_handler(line)
+                        else:
+                            print(line)
+                except subprocess.TimeoutExpired:
+                    process.kill()
+                    stdout, stderr = process.communicate()
+                    print(f"stdout: {stdout}")
+                    print(f"stderr: {stderr}")
             else:
                 for line in process.stdout:
                     if output_handler:
@@ -264,7 +275,11 @@ class Client:
         try:
             response = urllib.request.urlopen(req)
         except urllib.error.HTTPError as err:
-            print(err.read().decode())
+            error = json.loads(err.read().decode())
+            if error["id"] == "Unauthorized":
+                raise TokenError()
+            else:
+                print(error)
         if method == "delete":
             response = True if response.status == 204 else False
         else:
