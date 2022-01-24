@@ -1,6 +1,8 @@
 """"""
 
+import lxml
 import pkg_resources
+import requests
 import semver
 import sh
 from understory import web
@@ -11,20 +13,21 @@ app = web.application(__name__, prefix="system")
 
 def get_versions(package):
     """Return the latest version if currently installed `package` is out of date."""
-    import feedparser  # FIXME here for nuitka
-
     current_version = pkg_resources.get_distribution(package).version
     current_version = current_version.partition("a")[0]  # TODO FIXME strips alpha/beta
     update_available = False
-    versions_url = f"https://pypi.org/rss/project/{package}/releases.xml"
-    versions = feedparser.parse(versions_url)["entries"]
-    try:
-        latest_version = versions[0]["title"]
-    except IndexError:
-        pass  # TODO fallback to query from GitHub API
-    else:
-        if semver.compare(current_version, latest_version) == -1:
-            update_available = latest_version
+    versions_rss = lxml.etree.fromstring(
+        requests.get(
+            f"https://pypi.org/rss/project/{package}/releases.xml"
+        ).text.encode("utf-8")
+    )
+    latest_version = [
+        child.getchildren()[0].text
+        for child in versions_rss.getchildren()[0].getchildren()
+        if child.tag == "item"
+    ][0]
+    if semver.compare(current_version, latest_version) == -1:
+        update_available = latest_version
     return current_version, update_available
 
 
@@ -33,14 +36,7 @@ class System:
     """Render information about the application structure."""
 
     def get(self):
-        applications = web.get_apps()
-        understory_version = pkg_resources.get_distribution("understory").version
-        return app.view.index(
-            tx.app,
-            get_versions("canopy-platform"),
-            get_versions("understory"),
-            applications,
-        )
+        return app.view.index(tx.app, get_versions("understory"), web.get_apps())
 
 
 def update_system():
@@ -54,7 +50,6 @@ def update_system():
         "install",
         "-U",
         "understory",
-        "canopy-platform",
     )
     sh.sudo("supervisorctl", "start", "canopy-app")
     # TODO XXX sh.sudo("supervisorctl", "restart", "canopy-app-jobs", _bg=True)

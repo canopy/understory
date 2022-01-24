@@ -191,19 +191,21 @@ class Database:
 
         conn = sqlite3.connect(path, detect_types=sqlite3.PARSE_DECLTYPES)
         # TODO conn.cursor().execute("PRAGMA foreign_keys = ON;")
-        try:
-            conn.enable_load_extension(True)
-        except AttributeError:
-            pass
-        else:
-            icuext_path = get_icu()
-            try:
-                conn.load_extension(str(icuext_path))
-            except sqlite3.OperationalError:
-                pass  # TODO make ICU available for all platforms
-            else:
-                conn.enable_load_extension(False)
-                conn.execute("SELECT icu_load_collation('en_US', 'UNICODE');")
+
+        # TODO try:
+        # TODO     conn.enable_load_extension(True)
+        # TODO except AttributeError:
+        # TODO     pass
+        # TODO else:
+        # TODO     icuext_path = get_icu()
+        # TODO     try:
+        # TODO         conn.load_extension(str(icuext_path))
+        # TODO     except sqlite3.OperationalError:
+        # TODO         pass  # TODO make ICU available for all platforms
+        # TODO     else:
+        # TODO         conn.enable_load_extension(False)
+        # TODO         conn.execute("SELECT icu_load_collation('en_US', 'UNICODE');")
+
         conn.row_factory = sqlite3.Row
         # conn.execute("PRAGMA user_version")
         self.conn = conn

@@ -1,4 +1,4 @@
-$def with (app, canopy_version, understory_version, applications)
+$def with (app, understory_version, applications)
 $var title: $app.name
 
 <h2>Route Controllers</h2>
@@ -54,9 +54,6 @@ $for wrapper in app.wrappers:
 </ul>
 
 $def aside():
-    <h4>Canopy</h4>
-    <p>$canopy_version[0]</p>
-    $# if canopy_version[1]:
     <form action=/system/update method=post><button>Update</button></form>
     <h4><a href=/system/applications>Applications</a></h4>
     <ul id=applications>

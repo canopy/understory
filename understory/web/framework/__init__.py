@@ -677,7 +677,7 @@ class Application:
             self.model = sql.model(name, **model)
         try:
             self.view = mm.templates(name)
-        except ModuleNotFoundError:
+        except ModuleNotFoundError as err:
             pass
 
         try:

@@ -2,51 +2,22 @@
 
 Social web framework
 
-## A basic website
+## Use
 
+### A simple website
 
+    pip install understory
 
-## An IndieWeb-compatible personal website
+Create a directory for your website (eg. `mysite/`) and place the following in
+the package's `__init__.py` (eg. `mysite/__init__.py`):
 
-Install [Poetry](https://python-poetry.org).
+```python
+from understory import web
 
-Clone your empty website repository and descend into it. *If you
-use a **private** GitHub repository your changes will be deployed through
-GitHub. If you use a **public** repository your changes will be deployed
-through PyPI.*
+app = web.application(__name__)
 
-Initialize your project and add understory as a dependency.
+@app.route("")
+    return "peaches"
+```
 
-    poetry init
-    poetry add understory
-
-Create a file `site.py`:
-
-    from understory import indieweb
-    app = indieweb.personal_site(__name__)
-
-<!--Add your site's app as an entry point in your `pyproject.toml`:
-
-    poetry run web install site:app AliceAnderson-->
-
-Serve your website locally in development mode:
-
-    poetry run web serve site:app
-
-Open <a href=http://localhost:9000>localhost:9000</a> in your browser.
-
-*Develop.* For example, add a custom route:
-
-    import random
-    
-    @app.route(r"hello")
-    class SayHello:
-        return random.choice(["How you doin'?", "What's happening?", "What's up?"])
-
-To publish:
-
-    poetry run pkg publish patch
-
-To deploy:
-
-    poetry run gaea deploy site:app alice.anderson.example
+    web serve mysite
