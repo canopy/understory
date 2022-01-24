@@ -17,7 +17,9 @@ from understory import web
 app = web.application(__name__)
 
 @app.route("")
-    return "peaches"
+class Landing:
+    def get(self):
+        return "peaches"
 ```
 
     web serve mysite
