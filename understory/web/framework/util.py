@@ -123,6 +123,14 @@ class Request(Context):
         for name, value in environ.items():
             if name.startswith("HTTP_"):
                 self.headers[name[5:]] = value
+        try:
+            self.headers["content-type"] = environ["CONTENT_TYPE"]
+        except KeyError:
+            pass
+        try:
+            self.headers["content-length"] = environ["CONTENT_LENGTH"]
+        except KeyError:
+            pass
         if self.method in ("PROPFIND", "REPORT"):  # NOTE for WebDav
             self.body = lxml.etree.fromstring(environ["wsgi.input"].read())
         elif self.method in ("PUT",):
