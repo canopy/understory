@@ -16,7 +16,7 @@ from understory import web
 
 app = web.application(__name__)
 
-@app.route("")
+@app.control("")
 class Landing:
     def get(self):
         return "peaches"
