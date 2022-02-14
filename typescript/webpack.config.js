@@ -17,7 +17,7 @@ const config = {
 const browserConfig = Object.assign({}, config, {
   output: {
     path: path.resolve(__dirname),
-    filename: 'understory/web/framework/static/understory.js',
+    filename: '../python/understory/web/framework/static/understory.js',
     library: 'understory'
   }
 })
