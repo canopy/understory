@@ -1,0 +1,18 @@
+$def with (return_url)
+$var title: Sign In
+
+<h3>For Guests</h3>
+<form action=/guests/sign-in>
+<div><label>Your website<br>
+<input type=hidden name=return_url value="$return_url">
+<input type=text name=me placeholder="https://me"></label></div>
+<button>Sign In</button>
+</form>
+
+<h3>For Site Owner</h3>
+<form action=/owner/sign-in method=post>
+<div><label>Passphrase<br>
+<input type=hidden name=return_url value="$return_url">
+<input type=text name=passphrase></label></div>
+<button>Sign In</button>
+</form>

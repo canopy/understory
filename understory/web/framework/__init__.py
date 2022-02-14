@@ -17,6 +17,7 @@ a Pythonic API.
 
 from __future__ import annotations
 
+import asyncio
 import collections
 # import errno
 import getpass
@@ -24,6 +25,7 @@ import hashlib
 import inspect
 import os
 import pathlib
+import platform
 import re
 import secrets
 import shutil
@@ -39,7 +41,6 @@ import Crypto.Random.random
 import gevent.pywsgi
 import pendulum
 import pkg_resources
-import sh
 import unidecode
 import watchdog.events
 import watchdog.observers
@@ -256,56 +257,69 @@ def config_servers(root, web_server_config_handler=None):
     )
 
 
-def serve(wsgi_app, port=9300, socket=None, workers=2, watch_dir="."):
-    # root = pathlib.Path(app.cfg["root"])
-    # watch = app.cfg.get("watch")
-    # bg = False
-    # if watch:
-    #     bg = True
-
-    def process(line):
-        # TODO log everything, filter display to relevant
-        print(line.rstrip())
-
+async def serve(wsgi_app, port=9300, socket=None, workers=2, watch_dir="."):
     if socket:
         binding = f"unix:{socket}"
     else:
         binding = f"0.0.0.0:{port}"
-    proc = sh.gunicorn(
-        wsgi_app,
-        bind=binding,
-        worker_class="gevent",
-        workers=workers,
-        _bg=True,
-        _err=process,
-        _out=process,
-    )
-    # if watch:
-    event_handler = Watchdog(proc)
+
+    SYSTEM = platform.system()
+    if SYSTEM == "Windows":
+        command = ["waitress-serve", "--listen", binding, wsgi_app]
+    else:
+        command = [
+            "gunicorn",
+            wsgi_app,
+            "--bind",
+            binding,
+            "--worker-class",
+            "gevent",
+            "--workers",
+            str(workers),
+        ]
+
+    async def output_filter(input_stream, output_stream):
+        while not input_stream.at_eof():
+            output = await input_stream.readline()
+            if not output.startswith(b"filtered"):
+                output_stream.buffer.write(output)
+                output_stream.flush()
+
+    class Watchdog(watchdog.events.FileSystemEventHandler):
+        """Restart server when source directory changes."""
+
+        def on_modified(self, event):
+            if event.src_path.endswith((".py", ".toml")):
+                # XXX if kvdb:
+                # XXX     while kvdb["reload-lock"]:
+                # XXX         time.sleep(2)
+                if SYSTEM == "Windows":
+                    proc.send_signal(signal.SIGTERM)
+                else:
+                    proc.send_signal(signal.SIGHUP)
+
+    proc = None
+    event_handler = Watchdog()
     observer = watchdog.observers.Observer()
     observer.schedule(event_handler, watch_dir, recursive=True)
     observer.start()
     try:
-        proc.wait()
+        while True:
+            proc = await asyncio.create_subprocess_exec(
+                *command, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
+            )
+            await asyncio.gather(
+                output_filter(proc.stderr, sys.stderr),
+                output_filter(proc.stdout, sys.stdout),
+            )
+            await proc.wait()
     except KeyboardInterrupt:
         observer.stop()
     observer.join()
-    proc.signal(signal.SIGQUIT)
-
-
-class Watchdog(watchdog.events.FileSystemEventHandler):
-    """Restart server when source directory changes."""
-
-    def __init__(self, server_proc):
-        self.server_proc = server_proc
-        super(Watchdog, self).__init__()
-
-    def on_modified(self, event):
-        if event.src_path.endswith((".py", ".toml")):
-            if kvdb:
-                while kvdb["reload-lock"]:
-                    time.sleep(2)
-            self.server_proc.signal(signal.SIGHUP)
+    if SYSTEM == "Windows":
+        proc.send_signal(signal.SIGTERM)
+    else:
+        proc.send_signal(signal.SIGQUIT)
 
 
 def get_apps():
@@ -314,7 +328,7 @@ def get_apps():
     for ep in pkg_resources.iter_entry_points("web.apps"):
         try:
             handler = ep.load()
-        except ModuleNotFoundError:
+        except (FileNotFoundError, ModuleNotFoundError):
             print(f"couldn't load entry point: {ep}")
             continue
         try:
@@ -804,7 +818,7 @@ class Application:
             class Route(controller, Resource):
 
                 __doc__ = controller.__doc__
-                __web__ = path_template, templates
+                __web__ = path_template, templates, self
                 handler = controller
 
             try:
@@ -1071,10 +1085,12 @@ class Application:
             m = re.match(mount, path)
             if m:
                 controller = app.get_controller(path[m.span()[1] :].lstrip("/"))
+                if controller is None:
+                    continue
                 for k, v in m.groupdict().items():
                     setattr(controller, k, v)
                 return controller
-        return ResourceNotFound()
+        return None  # ResourceNotFound()
 
     def get_handler(self, controller, method="get"):
         method = method.lower()
@@ -1261,11 +1277,9 @@ def enqueue(callable, *args, **kwargs):
 
     """
     signature_id = get_job_signature(callable, *args, **kwargs)
-    run_id = nbrandom(9)
-    tx.db.insert("job_runs", job_id=run_id, job_signature_id=signature_id)
-    # TODO add a "seen" column
-    tx.kv["jobs"].append(run_id)
-    return run_id
+    job_id = nbrandom(9)
+    tx.db.insert("job_runs", job_id=job_id, job_signature_id=signature_id)
+    return job_id
 
 
 def get_job_signature(callable, *args, **kwargs):

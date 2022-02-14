@@ -1,3 +1,6 @@
+canopy-data
+understory.build
+understory.dist
 geckodriver.log
 poetry.lock
 package-lock.json

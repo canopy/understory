@@ -2,7 +2,6 @@
 
 import time
 
-import sh
 from understory import web
 
 URLS = {"user": "https://twitter.com/(?P<user>.+)"}

@@ -1,10 +1,19 @@
+$def with (host_token)
 $var title: Site Owner
 
 <div><label>Your address<br>
-<input type=text readonly value="$tx.host.owner['uid']"></div>
+<input type=text readonly value="$tx.host.owner['uid'][0]"></div>
 
 <div><label>Name<br>
-<input type=text value="$tx.host.owner['name']"></div>
+<input type=text value="$tx.host.owner['name'][0]"></div>
 
-<div><label>Elsewhere<br>
-<input type=text value="$tx.host.owner['name']"></div>
+<!--div><label>Elsewhere<br>
+<input type=text value="$tx.host.owner['name'][0]"></div-->
+
+$if host_token:
+    <form action=/owner/move method=post>
+    <button>Move site to the cloud</button>
+    </form>
+$else:
+    <p>If you'd like to move this site to the cloud, please add a
+    hosting <a href=/providers>provider</a>.</p>

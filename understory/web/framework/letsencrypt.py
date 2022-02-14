@@ -1,7 +1,6 @@
 """A simple Let's Encrypt interface (a la acme-tiny)."""
 
 import acme_tiny
-import sh
 
 
 def generate_cert(domain, cert_dir, challenge_dir):

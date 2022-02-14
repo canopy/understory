@@ -4,11 +4,28 @@ import lxml
 import pkg_resources
 import requests
 import semver
-import sh
 from understory import web
 from understory.web import tx
 
-app = web.application(__name__, prefix="system")
+app = web.application(
+    __name__,
+    prefix="system",
+    model={
+        "config": {
+            "theme": "INTEGER",
+        },
+    },
+)
+
+
+@app.wrap
+def config_theme(handler, app):
+    try:
+        tx.host.theme = bool(tx.db.select("config")[0]["theme"])
+    except IndexError:
+        tx.db.insert("config", theme=True)
+        tx.host.theme = True
+    yield
 
 
 def get_versions(package):
@@ -36,7 +53,7 @@ class System:
     """Render information about the application structure."""
 
     def get(self):
-        return app.view.index(tx.app, get_versions("understory"), web.get_apps())
+        return app.view.index(tx.app)  # , get_versions("understory"), web.get_apps())
 
 
 def update_system():
@@ -53,6 +70,15 @@ def update_system():
     )
     sh.sudo("supervisorctl", "start", "canopy-app")
     # TODO XXX sh.sudo("supervisorctl", "restart", "canopy-app-jobs", _bg=True)
+
+
+@app.control("theme")
+class Theme:
+    """"""
+
+    def post(self):
+        tx.db.update("config", theme=web.form("action").action == "activate")
+        return "accepted"
 
 
 @app.control("update")

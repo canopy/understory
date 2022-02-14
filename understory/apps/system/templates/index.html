@@ -1,5 +1,13 @@
-$def with (app, understory_version, applications)
+$def with (app)
+$# , understory_version, applications)
 $var title: $app.name
+
+<h2>Theme</h2>
+
+<form action=/system/theme method=post>
+$ action = "deactivate" if tx.host.theme else "activate"
+<button name=action value=$action>$action.capitalize()</button>
+</form>
 
 <h2>Route Controllers</h2>
 
@@ -55,18 +63,18 @@ $for wrapper in app.wrappers:
 
 $def aside():
     <form action=/system/update method=post><button>Update</button></form>
-    <h4><a href=/system/applications>Applications</a></h4>
-    <ul id=applications>
-    $for application in applications:
-        <li>$application.project_name<br>
-        <small>$application.version</small></li>
-    </ul>
-    <form method=post action=/system/applications>
-        <label><small>Application URL</small><br>
-        <label class=bounding><input type=text name=application_url
-        placeholder="github path, pypi path or .git url"></label></label>
-        <div class=buttons><button>Install</button></div>
-    </form>
+    $# <h4><a href=/system/applications>Applications</a></h4>
+    $# <ul id=applications>
+    $# $for application in applications:
+    $#     <li>$application.project_name<br>
+    $#     <small>$application.version</small></li>
+    $# </ul>
+    $# <form method=post action=/system/applications>
+    $#     <label><small>Application URL</small><br>
+    $#     <label class=bounding><input type=text name=application_url
+    $#     placeholder="github path, pypi path or .git url"></label></label>
+    $#     <div class=buttons><button>Install</button></div>
+    $# </form>
 $var aside = aside
 
 $# XXX <ul>

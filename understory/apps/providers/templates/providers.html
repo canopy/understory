@@ -9,12 +9,12 @@ $var title: Service Providers
 
 <h2>Machine Host</h2>
 $if host:
-    <form action=/sites/providers/host method=delete>
+    <form action=/providers/host method=delete>
     <input type=hidden name=_http_method value=delete>
     <button>Forget</button>
     </form>
 $else:
-    <form action=/sites/providers/host method=post>
+    <form action=/providers/host method=post>
     <ul class=hosts>
         <li><label><input type=radio name=service value=digitalocean.com> Digital Ocean</label>
         <small><a href=https://cloud.digitalocean.com/account/api/tokens>settings</a></small></li>
@@ -26,12 +26,12 @@ $else:
 
 <h2>Domain Registrar</h2>
 $if registrar:
-    <form action=/sites/providers/registrar method=delete>
+    <form action=/providers/registrar method=delete>
     <input type=hidden name=_http_method value=delete>
     <button>Forget</button>
     </form>
 $else:
-    <form action=/sites/providers/registrar method=post>
+    <form action=/providers/registrar method=post>
     <ul class=hosts>
         <li><label><input type=radio name=service value=dynadot.com> Dynadot</label>
         <small><a href=https://www.dynadot.com/account/domain/setting/api.html>settings</a></small></li>

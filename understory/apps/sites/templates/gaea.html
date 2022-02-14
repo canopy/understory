@@ -1,0 +1,128 @@
+$def with ()
+$# , domains, dns)
+<!doctype html>
+<html>
+<head>
+<meta charset=utf-8>
+<title>Spawn your personal website..</title>
+<link rel=stylesheet href=/static/screen.css>
+</head>
+<body>
+<h1>Spawn your personal website..</h1>
+<p>This installer will walk you through setting up your personal website.</p>
+
+$# $if "machine" in config:
+$#     <p>Machine: $config["machine"] <button>Delete</button></p>
+$# $else:
+    <form id=spawn>
+    <!--h3><input type=radio name=mode value=automatic checked disabled> Automatic</h3-->
+    <h2>Choose a host</h2>
+    <h3>In the cloud</h3>
+    <p>A cloud host is an organization that will manage an internet-connected
+    machine on your behalf typically for a monthly fee.</p>
+
+    <div id=hosts style="display:grid;grid-template-columns:50% 50%;">
+    <div>
+    <ul>
+    <li><label><input required type=radio name=provider value=digitalocean.com> DigitalOcean
+    <small><a href=https://digitalocean.com
+    target=_blank>digitalocean.com</a></small></label></li>
+    <li><label><input required type=radio name=provider value=linode.com> Linode
+    <small><a href=https://linode.com
+    target=_blank>linode.com</a></small></label></li>
+    <li><label><input required type=radio name=provider value=hetzner.com> Hetzner
+    <small><a href=https://hetzner.com
+    target=_blank>hetzner.com</a></small></label></legend></li>
+    </ul>
+    <label>API Token<br>
+    <label class=bounding><input required type=text name=token></label></label>
+    </div>
+
+    <div><!-- style=break-inside:avoid-->
+    <p id=digitalocean>Go to the <a
+    href=https://cloud.digitalocean.com/account/api/tokens target=_blank>Applications
+    &amp; API</a> page and generate a new personal access token with write scope.</p>
+    <p id=linode>Go to the <a
+    href=https://cloud.linode.com/profile/tokens target=_blank>Tokens</a>
+    page and create a new personal access token with full read/write access.</p>
+    <p id=hetzner>Go to the <a
+    href=https://console.hetzner.cloud/projects target=_blank>Projects</a> page,
+    create a new project, go to that project's page, click on "Security" &rarr;
+    "API Tokens" and generate a new token with read/write permission.</p>
+    </div>
+    </div>
+
+    <!--h3><input type=radio name=mode value=manual disabled> Manual</h3>
+    <p>The machine should be a fresh install of vanilla Debian or Raspberry Pi OS
+    (formerly Raspbian).</p>
+
+    <label>IP Address
+    <small>of Raspberry Pi / Virtual Machine / localhost / remote</small><br>
+    <label class=bounding><input type=text name=host_ip disabled></label></label><br>
+    <label>Root Passphrase<br>
+    <label class=bounding><input type=text name=root_passphrase disabled></label>
+    </label-->
+
+    <div class=buttons><button>Spawn</button></div>
+    </form>
+    <div id=progress>
+    <p id=machine_spawned></p>
+    <p id=system_setup></p>
+    <p id=nginx_setup></p>
+    </div>
+    <p id=status></p>
+
+$# $if "registrar" in config:
+$#     <p>Registrar: $config["registrar"]["provider"]</p>
+$# $else:
+$#     <form id=registrar>
+$#         <fieldset><legend><label><input type=checkbox name=use_domain checked> Domain Name <small>(optional)</small></label></legend>
+$#     <p>A domain name registrar is an organization that will register domain names
+$#     for you typically for an annual fee.</p>
+$#     <p><small>Note: in order to use a domain name your machine must be
+$#     publicly reachable.</small></p>
+$#     <ul>
+$#     <li><label><input type=radio name=provider value=dynadot.com> Dynadot
+$#     <small><a href=https://dynadot.com>dynadot.com</a></small></label></li>
+$#     <li><label><input type=radio name=provider value=name.com> Name
+$#     <small><a href=https://name.com>name.com</a></small></label></li>
+$#     </ul>
+$#     <p id=dynadot>Go to the <a
+$#     href=https://www.dynadot.com/account/domain/setting/api.html target=_blank>API</a>
+$#     page, unlock your account and generate a new key.</p>
+$#     <p id=namecom>Go to the <a
+$#     href=https://www.name.com/account/settings/api target=_blank>API</a>
+$#     page, agree to the terms if you haven't already and generate a new token.</p>
+$#     <label id=username class=field>Username: <label class=bounding><input
+$#     type=text name=username></label></label>
+$#     <label id=token class=field>Token/Key: <label class=bounding><input
+$#     type=text name=token></label></label>
+$#     <div class=buttons><button>Save</button></div>
+$#     </fieldset>
+
+$# $if "domain" in config:
+$#     $if not dns["ns"][0].endswith(config["registrar"]["provider"] + "."):
+$#         <p>Your DNS is being managed off-registrar... not supported yet.</p>
+$#     <form id=create>
+$#     <fieldset><legend>Site Details</legend>
+$#     <p>Domain<br>
+$#     <input type=text name=domain value=$config["domain"] disabled></p>
+$#     <p><label>Subdomain <small>(optional)</small><br><label
+$#     class=bounding><input name=subdomain></label></label></p>
+$#     <label class=field>Your display name<br><label class=bounding><input type=text
+$#     name=name></label></label>
+$#     <div class=buttons><button>Create</button></div>
+$#     </fieldset>
+$#     </form>
+$# $else:
+$#     <form id=domain>
+$#     <select name=domain>
+$#     $for domain, expiration in domains:
+$#         <option value=$domain>$domain</option>
+$#     </select>
+$#     <div class=buttons><button>Choose</button></div>
+$#     </form>
+
+<script src=/static/main.js></script>
+</body>
+</html>

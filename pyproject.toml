@@ -1,24 +1,23 @@
 [tool.poetry]
 name = "understory"
-version = "0.0.83-alpha.4"
-description = "Social web framework."
+version = "0.0.92"
+description = "Social web scaffolding."
 authors = ["Angelo Gladding <angelo@ragt.ag>"]
 license = "AGPL-3.0-or-later"
 readme = "README.md"
 
 [tool.poetry.urls]
-Homepage = "https://understory.cloud/understory"
-Issues = "https://github.com/canopy/understory/issues"
+Homepage = "https://understory.social"
 
 [tool.poetry.scripts]
 loveliness = "understory.loveliness:main"
 web = "understory.web.__main__:main"
+build_understory = "main:build"
 
 [tool.poetry.dependencies]
-python = "^3.9,<3.10"
+python = "^3.9"
 argcomplete = "^1.12.3"
 pendulum = "^2.1.2"
-sh = "^1.14.2"
 semver = "^2.13.0"
 lxml = "^4.6.3"
 Pygments = "^2.9.0"
@@ -47,6 +46,14 @@ regex = "^2021.7.6"
 rich = "^10.7.0"
 microformats = "^0"
 certifi = "^2021.10.8"
+waitress = "^2.0.0"
+vosk = "^0.3.32"
+sounddevice = "^0.4.4"
+gTTS = "^2.2.3"
+pyttsx3 = "^2.90"
+playsound = "^1.3.0"
+PySide6 = { version = "^6.2.2", python = "<3.11" }
+fifteen-ai = "^0.1.0"
 
 [tool.poetry.dev-dependencies]
 ipython = "^8.0.1"
@@ -60,8 +67,8 @@ flake8 = "^3.9.2"
 flake8-docstrings = "^1.6.0"
 pep8-naming = "^0.12.0"
 pydeps = "^1.10.12"
-microformats = {path = "../microformats-python"}
 radon = "^5.1.0"
+Nuitka = "^0.6.19"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

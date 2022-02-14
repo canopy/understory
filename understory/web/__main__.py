@@ -37,10 +37,12 @@ class Serve:
         add_arg("--watch", default=".", help="directory to watch for changes")
 
     def run(self, stdin, log):
+        import asyncio
+
         if self.port:
-            web.serve(self.app, port=self.port, watch_dir=self.watch)
+            asyncio.run(web.serve(self.app, port=self.port, watch_dir=self.watch))
         elif self.socket:
-            web.serve(self.app, socket=self.socket, watch_dir=self.watch)
+            asyncio.run(web.serve(self.app, socket=self.socket, watch_dir=self.watch))
         else:
             print("must provide a port or a socket")
             return 1

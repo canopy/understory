@@ -70,7 +70,8 @@ APTITUDE_PACKAGES = (
     "imagemagick",  # heic -> jpeg
     "libsm-dev",
     "python-opencv",  # opencv
-    "libevent-dev",  # Tor
+    "tor",
+    # XXX "libevent-dev",  # Tor
     "pandoc",  # markup translation
     "graphviz",  # graphing
     "libgtk-3-0",
@@ -237,8 +238,23 @@ def setup_python(ip_address):
 
 def setup_canopy(ip_address):
     ssh = digitalocean.get_ssh("root", ip_address, process_out(ip_address))
-    log("creating primary virtual environment")
-    ssh("/root/python/bin/python3 -m venv /root/canopy")
+    # log("creating primary virtual environment")
+    # ssh("/root/python/bin/python3 -m venv /root/canopy")
+    # ssh(
+    #     "cat > /root/runinenv",
+    #     stdin=textwrap.dedent(
+    #         """\
+    #         #!/usr/bin/env bash
+    #         VENV=$1
+    #         . ${VENV}/bin/activate
+    #         shift 1
+    #         exec "$@"
+    #         deactivate"""
+    #     ),
+    # )
+    ssh("chmod", "+x", "/root/runinenv")
+    log("installing canopy")
+    ssh("/root/runinenv", "/root/canopy", "pip", "install", "canopy-platform")
     return
 
     # if self.env_dir.exists():

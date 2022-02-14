@@ -4,7 +4,13 @@ Social web framework
 
 ## Use
 
-### A simple website
+### Get on
+
+Linux |
+Windows |
+Mac
+
+### Make a simple website
 
     pip install understory
 
@@ -23,3 +29,13 @@ class Landing:
 ```
 
     web serve mysite
+
+## Develop
+
+```shell
+git clone https://github.com/canopy/canopy.git && cd canopy
+poetry install
+WEBCTX=dev poetry run web serve canopy:app --port 9000
+# hack
+poetry run build_understory  # optional
+```

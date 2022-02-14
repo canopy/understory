@@ -5,7 +5,6 @@ from understory.web import tx
 
 model = sql.model(
     __name__,
-    providers={"service": "TEXT UNIQUE", "token": "TEXT UNIQUE"},
     machines={
         "name": "TEXT UNIQUE",
         "ip_address": "TEXT UNIQUE",
@@ -48,52 +47,108 @@ class Sites:
         return app.view.index(machines)
 
 
-@app.control("providers")
-class Providers:
-    """Manage your third-party service providers."""
+@app.control("gaea")
+class Gaea:
+    """"""
 
     def get(self):
-        try:
-            host = tx.db.select(
-                "providers", where="service = ?", vals=["digitalocean.com"]
-            )[0]
-        except IndexError:
-            host = None
-        try:
-            registrar = tx.db.select(
-                "providers", where="service = ?", vals=["dynadot.com"]
-            )[0]
-        except IndexError:
-            registrar = None
-        return app.view.providers(host, registrar)
+        # XXX config = get_config()
+        # XXX if web.tx.request.headers["accept"] == "application/json":
+        # XXX     return config
 
-
-@app.control("providers/host")
-class MachineHost:
-    """Manage your machine host."""
-
-    def post(self):
-        form = web.form("service", "token")
-        tx.db.insert("providers", service=form.service, token=form.token)
-        return "token has been set"
-
-    def delete(self):
-        tx.db.delete("providers", where="service = ?", vals=["digitalocean.com"])
-        return "deleted"
-
-
-@app.control("providers/registrar")
-class DomainRegistrar:
-    """Manage your domain registrar."""
+        # domains = []
+        # if "registrar" in config:
+        #     registrar = dict(config["registrar"])
+        #     clients = {
+        #         "dynadot.com": host.providers.Dynadot,
+        #         "name.com": host.providers.NameCom,
+        #     }
+        #     domains = clients[registrar.pop("provider")](**registrar).list_domains()
+        # dns = {}
+        # if "domain" in config:
+        #     dns["ns"] = [
+        #         str(ns)
+        #         for ns in web.dns.resolve(config["domain"], "NS").rrset.items.keys()
+        #     ]
+        #     dns["a"] = web.dns.resolve(config["domain"], "A")[0].address
+        return app.view.gaea()  # config)  # , domains, dns)
 
     def post(self):
-        form = web.form("service", "token")
-        tx.db.insert("providers", service=form.service, token=form.token)
-        return "token has been set"
+        # form = web.form("subdomain", "name")
+        form = web.form("provider", "token")
+        config = get_config()
 
-    def delete(self):
-        tx.db.delete("providers", where="service = ?", vals=["dynadot.com"])
-        return "deleted"
+        # domain = config["domain"]
+        # fqdn = domain
+        # if form.subdomain:
+        #     fqdn = f"{form.subdomain}.{domain}"
+        # update_config(fqdn=fqdn)
+
+        if form.provider == "digitalocean.com":
+            c = host.digitalocean.Client(form.token)
+            try:
+                c.get_keys()
+            except host.digitalocean.TokenError:
+                return {"status": "error", "message": "bad token"}
+        elif form.provider == "linode.com":
+            ...
+        elif form.provider == "hetzner.com":
+            ...
+        else:
+            return {
+                "status": "error",
+                "message": f"unsupported provider: {form.provider}",
+            }
+        config = update_config(
+            host={
+                "provider": form.provider,
+                "token": form.token,
+            }
+        )
+
+        # try:
+        #     ip_address = config["ip_address"]
+        # except KeyError:
+        ip_address = host.spawn_machine("canopy", config["host"]["token"])
+        config = update_config(ipAddress=ip_address, status={})
+
+        # registrar = config["registrar"]
+        # if registrar["provider"] == "dynadot.com":
+        #     dynadot = host.providers.Dynadot(registrar["token"])
+        #     dynadot.create_record(domain, ip_address, form.subdomain)
+        # elif registrar["provider"] == "name.com":
+        #     namecom = host.providers.NameCom(registrar["username"],
+        #                                      registrar["token"])
+        #     namecom.create_record(domain, ip_address, form.subdomain)
+
+        host.setup_machine(ip_address)
+        config = update_config(system_setup=True)
+        host.setup_nginx(ip_address)
+        config = update_config(nginx_installed=True)
+        return
+        host.generate_dhparam(ip_address)
+        host.setup_tor(ip_address)
+        host.setup_python(ip_address)
+        host.setup_supervisor(ip_address)
+
+        # while True:
+        #     try:
+        #         if web.dns.resolve(fqdn, "A")[0].address == ip_address:
+        #             break
+        #     except (
+        #         web.dns.NoAnswer,
+        #         web.dns.NXDOMAIN,
+        #         web.dns.Timeout,
+        #         web.dns.NoNameservers,
+        #     ):
+        #         pass
+        #     else:
+        #         print("waiting for DNS changes to propagate..")
+        #         time.sleep(15)
+
+        onion, passphrase = setup_canopy(ip_address)  # , form.name, fqdn)
+        update_config(onion=onion, passphrase=passphrase)
+        return {"onion": onion, "passphrase": passphrase}
 
 
 @app.control("machines")
@@ -179,8 +234,3 @@ class Domain:
     def get(self):
         domain = tx.db.select("domains", where="name = ?", vals=[self.domain_name])[0]
         return app.view.domain(domain)
-
-
-@model.control
-def get_dynadot_token(db):
-    return db.select("providers", where="service = ?", vals=["dynadot.com"])[0]["token"]

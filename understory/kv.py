@@ -22,7 +22,6 @@ import time
 import typing
 
 import redis
-import sh
 
 __all__ = ["db", "Database"]
 
@@ -1183,6 +1182,8 @@ test_server = None
 
 def setup_module(module):
     global test_server
+    import sh
+
     test_server = sh.redis_server(
         "--unixsocket", "/tmp/kv-test", "--port", "0", _bg=True
     )

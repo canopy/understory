@@ -18,7 +18,7 @@ import traceback
 import gevent.queue
 import pendulum
 
-from understory import kv, sql, term, web
+from understory import sql, term, web
 from understory.web import tx
 
 main = term.application("loveliness", "job queue")
@@ -72,12 +72,11 @@ def run_scheduler():  # browser):
 #     # time.sleep(.9)
 
 
-def handle_job(host, job_run_id, kv, db, cache_db):  # , browser):
+def handle_job(host, job_run_id, db, cache_db):  # , browser):
     """Handle a freshly dequeued job."""
     # TODO handle retries
     tx.host.name = host
     tx.host.db = db
-    tx.host.kv = kv
     tx.host.cache = web.cache(db=cache_db)
     # tx.browser = browser
     job = tx.db.select(
@@ -131,21 +130,23 @@ def handle_job(host, job_run_id, kv, db, cache_db):  # , browser):
     print(flush=True)
 
 
-def serve(domains):
+def serve():
     """"""
     # TODO gevent.spawn(run_scheduler)  # , sqldbs)  # , browser)
+    domains = [p.stem.removeprefix("site-") for p in pathlib.Path().glob("site-*.db")]
 
-    def run_worker(domain, kv, db, cache_db):  # browser):
-        for job in kv["jobs"].keep_popping():
-            handle_job(domain, job, kv, db, cache_db)  # , browser)
+    def run_worker(domain, db, cache_db):  # browser):
+        while True:
+            for job in db.select("job_runs", where="started is null"):
+                handle_job(domain, job["job_id"], db, cache_db)  # , browser)
+            time.sleep(0.5)
 
     for domain in domains:
-        kvdb = kv.db(domain, ":", {"jobs": "list"})
         sqldb = sql.db(f"site-{domain}.db")
         cache_db = sql.db(f"cache-{domain}.db")
         # browser = agent.browser()
         for _ in range(worker_count):
-            gevent.spawn(run_worker, domain, kvdb, sqldb, cache_db)  # , browser)
+            gevent.spawn(run_worker, domain, sqldb, cache_db)  # , browser)
     try:
         while True:
             time.sleep(1)
@@ -160,7 +161,7 @@ class Serve:
 
     def run(self, stdin, log):
         """Spawn a scheduler and workers and start sending jobs to them."""
-        serve(p.stem.removeprefix("site-") for p in pathlib.Path().glob("site-*.db"))
+        serve()
 
 
 if __name__ == "__main__":
