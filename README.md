@@ -1,41 +1,78 @@
 # understory
 
-Social web framework
+Social web scaffolding
 
-## Use
+## Spawn a website in one-click
 
-### Get on
+Linux | Windows | Mac
 
-Linux |
-Windows |
-Mac
+## Use the library to build a website
 
-### Make a simple website
-
+```shell
     pip install understory
+```
 
-Create a directory for your website (eg. `mysite/`) and place the following in
-the package's `__init__.py` (eg. `mysite/__init__.py`):
+### Create the following files
+
+```
+example
+├── __init__.py
+├── static
+│   └── screen.css
+└── templates
+    └── index.html
+```
+
+**example/\_\_init\_\_.py**
 
 ```python
-from understory import web
+from understory import web, indieauth
 
-app = web.application(__name__)
+app = web.application(__name__, mounts=[indieauth.client.app])
+
 
 @app.control("")
 class Landing:
     def get(self):
-        return "peaches"
+        return app.view.index(web.tx.user)
 ```
 
-    web serve mysite
+**example/static/screen.css**
 
-## Develop
+```css
+p.greeting { color: #f00; font-size: 5em; }
+```
+
+**example/templates/__init__.py**
+
+```python
+import random
+
+from understory.indieauth import web_sign_in
+
+__all__ = ["random", "web_sign_in_form"]
+```
+
+**example/templates/index.html**
+
+```html
+$def with (user, greeting)
+
+$if user.session:
+    $ greeting = random.choice(("hello", "hi", "howdy"))
+    <p class=greeting>$greeting $user.name ($user.url)</p>
+$else:
+    $:web_sign_in_form()
+```
+
+### Test
 
 ```shell
-git clone https://github.com/canopy/canopy.git && cd canopy
-poetry install
-WEBCTX=dev poetry run web serve canopy:app --port 9000
-# hack
-poetry run build_understory  # optional
+    web serve example
+```
+
+### Publish
+
+```shell
+    web host create example
 ```

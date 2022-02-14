@@ -7,7 +7,7 @@ license = "AGPL-3.0-or-later"
 readme = "README.md"
 
 [tool.poetry.urls]
-Homepage = "https://understory.social"
+Homepage = "https://understory.stream"
 
 [tool.poetry.scripts]
 loveliness = "understory.loveliness:main"
