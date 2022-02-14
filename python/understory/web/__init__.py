@@ -11,10 +11,9 @@ Simple interface, simple deploy.
 
 """
 
-import microformats as mf
 import pendulum
 from dns import resolver as dns
-from understory import mm
+from understory import mf, mm
 from understory.mkdn import render as mkdn
 from understory.mm import Template as template  # noqa
 from understory.mm import templates  # noqa
