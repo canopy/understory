@@ -2,7 +2,7 @@
 
 Social web scaffolding
 
-## Spawn a website in one-click
+## Spawn a personal website in one-click
 
 Linux | Windows | Mac
 
@@ -65,7 +65,7 @@ $else:
     $:web_sign_in_form()
 ```
 
-### Test
+### Develop
 
 ```shell
     web serve example
