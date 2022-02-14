@@ -43,7 +43,7 @@ class Landing:
 p.greeting { color: #f00; font-size: 5em; }
 ```
 
-**example/templates/__init__.py**
+**example/templates/\_\_init\_\_.py**
 
 ```python
 import random
