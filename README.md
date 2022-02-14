@@ -20,7 +20,7 @@ example
 ├── static
 │   └── screen.css
 └── templates
-│   ├── __init__.py
+    ├── __init__.py
     └── index.html
 ```
 
