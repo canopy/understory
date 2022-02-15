@@ -52,6 +52,6 @@ title case, auto-reference and spell check.
 
 """
 
-from .templating import Template, TemplatePackage, build, templates
+from .templating import TemplatePackage, build, template, templates
 
-__all__ = ["templates", "build", "Template", "TemplatePackage"]
+__all__ = ["templates", "build", "template", "TemplatePackage"]

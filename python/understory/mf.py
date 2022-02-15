@@ -7,7 +7,7 @@ import mf2py
 import mf2util as util
 from mf2util import interpret_comment, interpret_event, interpret_feed
 
-from . import uri, web
+from understory import uri, web
 
 __all__ = [
     "parse",

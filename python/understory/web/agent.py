@@ -274,7 +274,7 @@ class Cache:
             resource.text = resource_data["html"]
         except (AttributeError, IndexError):
             url, resource = self.add(resource_url)
-        return url, resource
+        return resource
 
 
 cache = Cache

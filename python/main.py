@@ -17,7 +17,7 @@ import subprocess
 import time
 import webbrowser
 
-import fifteen_api
+import fifteen_ai
 import gtts
 import gunicorn.app.base
 import playsound
@@ -241,7 +241,7 @@ def speak(message, character="system"):
     elif character == "google":
         gtts.gTTS(message).save(audio)
     else:
-        fifteen_api.tts(message, character, filename=audio)
+        fifteen_ai.tts(message, character, filename=audio)
     playsound.playsound(audio)
     audio.unlink()
 

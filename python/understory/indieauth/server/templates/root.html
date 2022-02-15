@@ -1,0 +1,60 @@
+$def with (owner, clients)
+$var title: Auth
+
+$if tx.user.session:
+    $if tx.user.is_owner:
+        <h2>Identity</h2>
+        <p>$owner["name"][0]</p>
+        <p><small>$owner["uid"][0]</small></p>
+        <form method=post action=/auth/sign-out>
+        <button>Sign Out</button>
+        </form>
+
+        <h2>People</h2>
+        $# <h3>Reciprocal</h3>
+        $# $ reciprocals = []
+        $# <ul>
+        $# $for client in clients:
+        $#     $for user in users:
+        $#         $if client["client_id"] == user["url"]:
+        $#             <li>$user["name"] $user["url"]</li>
+        $#             $reciprocals.append(user["url"])
+        $# </ul>
+
+        <h3>Who You've Visited</h3>
+        <p>personal websites that you've signed into</p>
+        <ul>
+        $for client in clients:
+            $if client["client_id"] in reciprocals:
+                $continue
+            <li>$client["client_name"] <small>$client["client_id"]</small></li>
+        </ul>
+        <h3>Your Visitors</h3>
+        <p>people that have signed into your website</p>
+        <ul>
+        $for user in users:
+            $if user["url"] in reciprocals:
+                $continue
+            <li>$user["name"] <small>$user["url"]
+            $if user["email"]:
+                $user["email"]
+            <br>$user["account_created"]</small></li>
+        </ul>
+
+        <h2>Clients</h2>
+        <h3>Devices/Programs</h3>
+        <p>personal access token based access</p>
+        <h3>Services</h3>
+        <p>non-personal websites that you've signed into</p>
+    $else:
+        <p>You are signed in as <strong>$tx.user.session["uid"]</strong></p>
+        <form method=post action=/auth/users/sign-out>
+        <button>Sign Out</button>
+        </form>
+$else:
+    <h2>Visitor</h2>
+    <form action=/auth/users/sign-in>
+    <div><label>Website address<br>
+    <input type=text name=me></label></div>
+    <button>Sign In</button>
+    </form>

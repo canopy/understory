@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+VENV=$1
+. ${VENV}/bin/activate
+shift 1
+exec "$@"
+deactivate

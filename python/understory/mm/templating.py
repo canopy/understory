@@ -21,7 +21,7 @@ __all__ = [
     "templates",
     "build",
     "TemplatePackage",
-    "Template",
+    "template",
     "CompiledTemplate",
     "TemplateResult",
 ]
@@ -452,6 +452,9 @@ class Template:
         if escape:
             value = websafe(value)
         return value
+
+
+template = Template
 
 
 class CompiledTemplate(Template):

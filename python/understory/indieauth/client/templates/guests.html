@@ -1,0 +1,7 @@
+$def with (guests)
+$var title: Guests
+
+<ul>
+$for guest in guests:
+    <li>$dict(guest)</li>
+</ul>

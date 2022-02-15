@@ -1,0 +1,55 @@
+$def with (clients, active, revoked)
+$var title: Sign-ins
+
+<form method=post action=/auth/sign-ins/personal>
+<button>Generate Personal Access Token</button>
+</form>
+
+<style>
+article {
+    display: grid;
+    grid-template-columns: 15em auto; }
+</style>
+
+<article>
+<nav>
+<h2>Clients</h2>
+<ul>
+$for client in clients:
+    <li><a href=/auth/clients/$client["client_id"].partition("://")[2]>\
+    $client["client_name"]</a></li>
+</ul>
+</nav>
+
+<section>
+<h2>Tokens</h2>
+<h3>Active</h3>
+$for auth in active:
+    <div>
+    <p><a href=/auth/clients/$auth["client_id"].partition("://")[2]>\
+    $auth["client_name"]</a><br>
+    <small>$auth["redirect_uri"]<br>
+    $auth["initiated"]</small></p>
+    $ r = auth["response"]
+    <p>$", ".join(r["scope"])</p>
+    $if "profile" in r:
+        <p>$r["profile"]</p>
+    <form action=/auth/revoke method=post>
+    <button>Revoke Token</button>
+    </form>
+    </div>
+
+<h3>Revoked</h3>
+$for auth in revoked:
+    <p><a href=/auth/clients/$auth["client_id"].partition("://")[2]>\
+    $auth["client_id"]</a><br>
+    $auth["initiated"]</small></p>
+    $ r = auth["response"]
+    <p>$", ".join(r["scope"])</p>
+    $if "profile" in r:
+        <p>$r["profile"]</p>
+    $if "access_token" in r:
+        <p>$r["access_token"]</p>
+    <p><em><strong>revoked $auth["revoked"]</strong></em></p>
+</section>
+</article>

@@ -1,0 +1,8 @@
+$def with (clients)
+$var title: Authorized Clients
+
+<ul>
+$for client in clients:
+    <li><a href=/auth/clients/$client["client_id"].partition("://")[2]>\
+    $client["client_name"]</a></li>
+</ul>

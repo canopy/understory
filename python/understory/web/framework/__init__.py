@@ -47,7 +47,6 @@ import watchdog.observers
 from rich.console import Console
 from understory import term  # noqa NOTE to colorize print()
 from understory import kv, mm, sql
-from understory.mm import Template
 
 from ..agent import cache, parse
 from ..response import Status  # noqa
@@ -86,7 +85,6 @@ __all__ = [
     "nbencode",
     "nbdecode",
     "nbrandom",
-    "Template",
     "config_templates",
     "generate_cert",
     "get_integrity_factory",

@@ -55,6 +55,9 @@ def parse(uri, secure=True) -> HTTPURI | HTTPSURI:
     """
     uri = str(uri)
     scheme, _, identifier = uri.partition(":")
+    if not identifier:
+        uri = f"https://{scheme}"
+        scheme = "https"
     try:
         handler = supported_schemes[scheme]
     except KeyError:
