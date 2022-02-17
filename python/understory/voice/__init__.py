@@ -32,7 +32,14 @@ def install():
 
 
 def transcribe():
-    """Return a list of phrasal voice inputs."""
+    """
+    Return a list of phrasal voice inputs.
+
+    - say "try again" to try the previous phrase again
+    - say "new paragraph" to start a new paragraph
+    - say "finished" when done
+
+    """
     install()
 
     phrases = []
@@ -72,10 +79,7 @@ def transcribe():
                     if phrases:
                         paragraphs.append(phrases)
                     print("", end="\r", file=sys.stderr)
-                    document = "\r\n\r\n".join(
-                        ". ".join(phrases) + "." for phrases in paragraphs
-                    )
-                    return document
+                    return paragraphs
                 else:
                     if words:
                         phrases.append(words)
