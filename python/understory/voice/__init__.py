@@ -74,7 +74,7 @@ def transcribe():
                 elif words == "new paragraph":
                     paragraphs.append(phrases)
                     phrases = []
-                    print("", end="\r", file=sys.stderr)
+                    print(" " * 13 + "\n", end="\r", file=sys.stderr)
                 elif words == "finished":
                     if phrases:
                         paragraphs.append(phrases)
