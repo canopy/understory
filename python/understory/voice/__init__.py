@@ -12,9 +12,8 @@ import sys
 import sounddevice
 import vosk
 from understory import web
-from vosk import SetLogLevel
 
-SetLogLevel(-1)
+vosk.SetLogLevel(-1)
 
 data_dir = pathlib.Path(__file__).parent
 vosk_base_url = "https://alphacephei.com/vosk/models/"
