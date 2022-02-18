@@ -1,0 +1,10 @@
+{
+  "compilerOptions": {
+    "moduleResolution": "node",
+    "outDir": "./dist",
+    "allowJs": true,
+    "target": "es6"
+  },
+  "files": ["src/background.ts", "src/content.ts", "src/devtools.ts", "src/home.ts",
+            "src/newtab.ts", "src/popup.ts", "src/sidebar.ts", "src/theme.ts"]
+}

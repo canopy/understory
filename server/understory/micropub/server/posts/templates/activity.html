@@ -1,0 +1,22 @@
+$def with (channels, media, posts)
+$var title: Posts
+
+$for post in posts:
+    <p><a href="$post['url'][0]">$post</a></p>
+
+$def aside():
+    <a href=/posts/all>All</a>
+    <h4>Channels</h4>
+    $if channels:
+        <ul>
+        $for channel in channels:
+            <li><a href=/posts/channels/$channel>$channel</a></li>
+        </ul>
+    <h4>Editors</h4>
+    <ul>
+    <li><a href=/editors/text>Text</a></li>
+    <li><a href=/editors/photo>Photo</a></li>
+    </ul>
+    <h4>Media</h4>
+    <p><a href=/media>$len(media) total</a></p>
+$var aside = aside

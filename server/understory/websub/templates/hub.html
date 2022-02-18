@@ -1,0 +1,43 @@
+$def with (sent, received)
+$var title: Subscriptions
+
+<style>
+.subscriptions {
+    list-style: none;
+    padding-left: 0; }
+</style>
+
+<ul class=subscriptions>
+$for sub in sent:
+    <li><strong><a href=/subscriptions/sent/$sub["sent_subscription_id"]>\
+    $sub["topic_url"]</a></strong> <small>$sub["subscribed"].diff_for_humans()</small>
+    <form action=/subscriptions/$sub["sent_subscription_id"]>
+        <input type=hidden name=action value=unsubscribe>
+        <button>Unsubscribe</button>
+    </form>
+    </li>
+</ul>
+
+<ul class=subscriptions>
+$for sub in received:
+    <li>
+    <div>
+        <strong>$uri(sub["callback_url"]).origin</strong> subscribed to <a
+        href=/subscriptions/received/$sub["received_subscription_id"]>\
+        /$sub["topic_url"].removeprefix(tx.origin)</a></strong>
+        <small>$sub["subscribed"].diff_for_humans()</small>
+    </div>
+    <form action=/subscriptions/$sub["received_subscription_id"]>
+        <input type=hidden name=action value=block>
+        <button>Block</button>
+    </form>
+    </li>
+</ul>
+
+$def aside():
+    <form method=post>
+        <label><small></small><br>
+        <label class=bounding><input type=text name=topic_url></label></label>
+        <div class=buttons><button>Subscribe</button></div>
+    </form>
+$var aside = aside

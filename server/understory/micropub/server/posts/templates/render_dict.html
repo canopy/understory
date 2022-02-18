@@ -1,0 +1,18 @@
+$def with (obj)
+
+$def render_dict(obj):
+    <dl>
+    $for prop, values in sorted(obj.items()):
+        <dt>$prop</dt>
+        <dd><ul>
+        $for value in values:
+            <li>
+            $if isinstance(value, dict):
+                $:render_dict(value)
+            $else:
+                $value
+            </li>
+        </ul></dd>
+    </dl>
+
+$:render_dict(obj)

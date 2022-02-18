@@ -1,0 +1,17 @@
+$def with (entries, render_dict)
+$var breadcrumbs = ("pub", "Content")
+$var title: Entries
+
+<ul>
+$for entry in entries:
+    <li>
+    $ r = entry["resource"]
+    $ permalink = r["url"][0]
+    <p><a href=$permalink>$permalink</a> <small>$entry["version"]</small></p>
+    <form method=post action=/pub>
+    <input type=hidden name=action value=delete>
+    <input type=hidden name=url value=$permalink>
+    <button>Delete</button>
+    </form>
+    $:render_dict(r)
+</ul>

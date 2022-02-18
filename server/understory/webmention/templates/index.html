@@ -1,0 +1,12 @@
+$def with (received, sent)
+$var title: Mentions
+
+<ul>
+$for r in received:
+    <li>$dict(r)</li>
+</ul>
+
+<ul>
+$for s in sent:
+    <li>$dict(s)</li>
+</ul>

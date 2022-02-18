@@ -1,0 +1,27 @@
+$def with (tables)
+$var title: Data
+
+<p>All your base are belong to you.</p>
+
+<h2>Migration</h2>
+
+<h3>Import</h3>
+
+<form action=/data/import method=post>
+<button>Import</button>
+</form>
+
+<h3>Export</h3>
+
+<form action=/data/export method=post>
+<button>Export</button>
+</form>
+
+<h2>Database</h2>
+
+<ul>
+$for table in tables:
+    $if table.startswith("_"):
+        $continue
+    <li><a href=/data/tables/$table>$table</a></li>
+</ul>

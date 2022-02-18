@@ -1,0 +1,103 @@
+$def with (entry)
+$# , mentions)
+$ p = entry["published"][0]
+$ breadcrumbs = (p.year, p.year, p.format("MM"), p.format("MMM"),
+$                p.format("DD"), p.format("D"))
+$var breadcrumbs = breadcrumbs
+$var classes = "h-entry"
+
+$ type = discover_post_type(entry)
+$if type == "note":
+    <div class=e-content>$:post_mkdn(entry["content"][0])</div>
+$elif type == "article":
+    $var title = entry["name"][0]
+    $# <h2 class=p-name>$entry["name"][0]</h2>
+    <div class=e-content>$:post_mkdn(entry["content"][0])</div>
+$elif type == "weight":
+    <h2 class=p-summary>$entry["summary"][0]</h2>
+    $ weight = entry["weight"][0]
+    <p class="p-weight h-measure"><span class=p-num>$weight["num"]</span>
+    <span class=p-unit>$weight["unit"]</span></p>
+$elif type == "bookmark":
+    $ bookmark = entry["bookmark-of"][0]
+    $var title: Bookmarked $bookmark
+    <p><big>Bookmarked <a class=u-bookmark-of
+    href=$bookmark>$bookmark</a></big></p>
+$elif type == "like":
+    $ like = entry["like-of"][0]
+    $var title: Liked $like
+    <p class=p-name><big class="h-cite u-like-of">Liked
+    <a class="p-name u-url" href=$like>$like</a></big></p>
+$elif type == "rsvp":
+    $ event = entry["in-reply-to"][0]
+    $var title: RSVP'd $entry["rsvp"] to $event["name"]
+    <p><big>RSVP'd <code>$entry["rsvp"]</code> <a class=u-bookmark-of
+    href=$event["url"]>$event["name"]</a></big></p>
+
+$# $if tx.user.is_owner:
+$#     $for metric, value in Readability(entry["content"][0]).metrics.items():
+$#         <h4>$metric</h4>
+$#         <pre>$value</pre>
+
+$# XXX $ a = entry["author"]
+$# XXX <p class="p-author h-card"><a class="u-url p-name" href=$a["uid"]>$a["name"]</a></p>
+
+$def aside():
+    <p><small><a class=u-url href=$entry["url"][0]><time class=dt-published
+    datetime="$entry['published'][0].isoformat()">\
+    $entry["published"][0].diff_for_humans()</time></a></small></p>
+    <p><small><strong>$entry["visibility"][0]</strong></small></p>
+
+    $if tx.user.session:
+        <a href=$tx.user.session["uid"][0]/actions?reply=$entry["url"][0]>reply</a>
+    $else:
+        <a href=web+action://reply?url=$entry["url"][0]>reply</a>
+$var aside = aside
+
+$# <footer>
+$# $for mention in mentions:
+$#     <div>
+$#     $if mention["data"]:
+$#         $ a = mention["data"]["author"]
+$#         $ comment_type = mention["data"]["comment_type"][0]
+$#         $if comment_type == "like":
+$#             $emoji.emojize(":red_heart:")
+$#     <small>
+$#     $if mention["data"]:
+$#         <a href=$a["uid"]>$a["name"]</a>
+$#     <a href=$mention["source"]><time class=dt-published
+$#     datetime="$mention['received'].isoformat()">\
+$#     $mention["received"].diff_for_humans()</time></a>
+$#     </small></div>
+$# </footer>
+
+<style>
+/* div.e-content {
+    font-size: 2em; } */
+</style>
+
+$# $elif type == "identification":
+$#     $ identification = entry["identification-of"][0]
+$#     $var title: Identified $identification["name"]
+$#     <p><big>Identified <a class=u-identification-of
+$#     href=$identification["url"]>$identification["name"]</a></big></p>
+$# $elif type == "follow":
+$#     $ follow = entry["follow-of"][0]
+$#     $var title: Followed $follow["name"]
+$#     <p><big>Followed <a class=u-follow-of
+$#     href=$follow["url"]>$follow["name"]</a></big></p>
+
+$if tx.user.is_owner:
+    <script src=/static/understory.js crossorigin=anonymous></script>
+    <script>
+    const { MicropubClient } = understory
+    const pub = new MicropubClient('/pub')
+    document.addEventListener('DOMContentLoaded', () => {
+      pub.getConfig().then(data => console.log(data))
+      pub.getCategories().then(data => {
+        data.categories.forEach(cat => {
+          addCategory(cat)
+        })
+      })
+    })
+    </script>

@@ -1,7 +1,11 @@
-# understory
+# Understory
 
 Social web scaffolding
 
-## Spawn a personal website in one-click
+## Create a personal website in one-click
 
-Linux | Windows | Mac
+Mac | Windows | Linux | [source](https://github.com/canopy/understory/tree/main/server)
+
+## Connect your browser to your website
+
+Chrome | Safari | Firefox | .xpi | [source](https://github.com/canopy/understory/tree/main/browser)

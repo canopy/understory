@@ -1,0 +1,34 @@
+$def with (files)
+$var title: Media
+
+<style>
+ul#files {
+    list-style: none;
+    padding-left: 0; }
+ul#files li img {
+    width: 100%; }
+ul#files li p {
+    text-align: right; }
+</style>
+
+<ul id=files>
+$for file in files:
+    <li>
+    <form action=/media/$file.name method=delete>
+    <input type=hidden name=_http_method value=delete>
+    <div><a href=/media/$file.name>\
+    $if file.name.endswith((".png", ".jpg", ".gif")):
+        <img src="/media/$file.name">\
+    </a></div>
+    <p><small>$round(file.stat().st_size / 1024)kb</small></p>
+    <button>Delete</button>
+    </form>
+    </li>
+</ul>
+
+$def aside():
+    <form action=/media enctype=multipart/form-data method=post>
+    <div><label>File <input name=file type=file></label></div>
+    <button>Upload</button>
+    </form>
+$var aside = aside

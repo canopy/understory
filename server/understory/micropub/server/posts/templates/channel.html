@@ -1,0 +1,10 @@
+$def with (channel, posts)
+$ c = channel["resource"]
+$var title: $c["name"][0]
+
+<p>$c["visibility"][0]</p>
+<ul>
+$for post in posts:
+    $ type = post["resource"]["type"][0]
+    <li><strong>$type</strong><br>$dict(post)</li>
+</ul>

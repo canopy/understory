@@ -1,0 +1,22 @@
+$def with (channels)
+$var title: Channels
+
+<form action=/pub method=post>
+<input type=hidden name=h value=feed>
+<div><label>Name <input name=name[]></label></div>
+<div><label>Slug <input name=slug[]></label></div>
+<button>Create</button>
+</form>
+
+<ul>
+$for channel in channels:
+    $ r = channel["resource"]
+    <li><a href=$r["url"][0]>$r["name"][0]</a>
+    <small>$r["uid"][0]</small></li>
+    $# <li>
+    $# <p><a href=$c["url"]>$c["url"]</a><br>
+    $# <small><strong>$c["resource"]["type"]</strong>
+    $# last modified $c["modified"].diff_for_humans()</small></p>
+    $# <pre>$pformat(c["resource"])</pre>
+    $# </li>
+</ul>

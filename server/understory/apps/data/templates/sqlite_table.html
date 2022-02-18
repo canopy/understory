@@ -1,0 +1,8 @@
+$def with (table, rows)
+$var breadcrumbs = ("data", "Data", "tables", "Tables")
+$var title: $table
+
+<ul>
+$for row in rows:
+    <li><pre>$pformat(dict(row))</pre></li>
+</ul>

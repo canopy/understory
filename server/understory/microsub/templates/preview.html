@@ -1,0 +1,16 @@
+$def with (url, preview, channels)
+$var title: Preview of $url
+
+<ul>
+$for item in preview["items"]:
+    <li>
+    $if "name" in item:
+        <div class=p-name>$:item["name"]</div>
+    $if "content" in item:
+        <div class=e-content>$:item["content"]</div>
+    $if "summary" in item:
+        <p class=p-summary>$:item["summary"]</p>
+    $# <big>$item["name"]</big><br><small><a
+    $# href=/sub/preview?url=$result["url"]>$result["url"]</a></small><br>
+    </li>
+</ul>

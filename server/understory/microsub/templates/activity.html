@@ -1,0 +1,32 @@
+$def with (following, channels)
+$var title: People
+
+$for person in following:
+    <div>$person</div>
+
+$def aside():
+    <style>
+    .channels {
+      list-style: none;
+      padding-left: 0; }
+    </style>
+    <form action=/people/search>
+        <div><label><small>Query (ie. address, keyword)</small><br>
+        <label class=bounding><input type=text name=q
+        placeholder="eg. example.com, cactus"></label></label></div>
+        <div class=buttons><button>Search</button></div>
+    </form>
+    <h4>Channels</h4>
+    $if channels:
+        <ul class=channels>
+        $for channel in channels[1:]:
+            <li><a href=/people/channels/$channel["uid"]>$channel["name"]</a></li>
+        </ul>
+    <form action=/people method=post>
+        <input type=hidden name=action value=channels>
+        <div><label><small>Name (ie. group, category)</small><br>
+        <label class=bounding><input type=text name=name
+        placeholder="eg. friends or gardening"></label></label></div>
+        <div class=buttons><button>Add</button></div>
+    </form>
+$var aside = aside

@@ -1,0 +1,228 @@
+$def with ()
+$var title: Text Editor
+$var show_title = False
+$var prefix: <form id=editor method=post>
+$var suffix: </form>
+
+$def header():
+    <div>
+    <label>In reply to <label class=bounding><input type=text name=in_reply_to></label></label>
+    <div id=reply_context></div>
+    </div>
+$var header = header
+
+<div>
+<label class=bounding><textarea id=content name=content style=height:15em></textarea></label>
+<div id=preview></div>
+</div>
+
+$def aside():
+    <div>
+    <label for=name>Name</label><br>
+    <label class=bounding><input type=text id=name name=name></label>
+    </div>
+    <div>
+    <label for=published>Publication date</label><br>
+    <input type=date name=published_date>
+    <input type=time name=published_time>
+    <select name=published_tz>
+    $for tz in pendulum.timezones:
+        $if "/" not in tz:
+            $continue
+        <option
+        $if tz == "America/Los_Angeles":
+            selected
+        >$tz</option>
+    </select>
+    </div>
+    <fieldset>
+    <legend>Channels</legend>
+    <!-- XXX todo populate fieldset with JS call to mp?q=config, returning the below divs filled out with server's channels -->
+    <div>
+    <input type=checkbox id=dnd name=channel value=dnd>
+    <label for=dnd>DnD</label>
+    </div>
+    <div>
+    <input type=checkbox id=hottakes name=channel value=hottakes>
+    <label for=hottakes>Hot Takes</label>
+    </div>
+    </fieldset>
+    <fieldset>
+    <legend for=visibility>Visibility</legend>
+    $# $for vis in config["visibility"]:
+    $#     <label><input type=radio name=visibility value=$vis
+    $#     required
+    $#     $if vis == "private":
+    $#         checked
+    $#     > $vis.capitalize()</label>
+    </fieldset>
+    <fieldset id=categories>
+      <legend>Categories</legend>
+      <!-- XXX todo populate with call to mp?q=config as with channels -->
+      <input type=text><button>Add</button>
+      <ul>
+      $# $for category in c
+      $#     <li><input type=checkbox id=coding name=category value=coding>
+      $#     <label for=coding>Coding</label></li>
+      </ul>
+    </fieldset>
+    <button>Create</button>
+$var aside = aside
+
+<style>
+#categories ul {
+  list-style: none;
+  padding-left: 0; }
+</style>
+
+<script src=/static/understory.js crossorigin=anonymous></script>
+<script>
+const addCategory = (cat) => {
+  const ul = document.querySelector('#categories ul')
+  const li = document.createElement('li')
+  const checkbox = document.createElement('input')
+  const tagname = document.createElement('span')
+  checkbox.type = 'checkbox'
+  checkbox.value = cat
+  li.appendChild(checkbox)
+  tagname.innerText = cat
+  li.appendChild(tagname)
+  ul.appendChild(li)
+}
+
+const previewMarkdown = (content) => {
+  if (content == "") {
+    preview.innerHTML = "";
+    return
+  }
+  let body = new FormData()
+  body.append('content', content)
+  fetch(
+    '/editors/text/preview/markdown',
+    {
+      method: 'POST',
+      body: body
+    }
+  ).then(response => {
+    if (response.status === 200) {
+      return response.json().then(data => {
+        preview.innerHTML = data['content']
+      })
+    }
+  })
+}
+
+const previewReplyContext = (url) => {
+  if (url == "") {
+    reply_context.innerHTML = "";
+    return
+  }
+  fetch(
+    '/editors/text/preview/resource?url=' + encodeURIComponent(url),
+  ).then(response => {
+    if (response.status === 200) {
+      return response.json().then(data => {
+          reply_context.innerHTML = `<p>$${data['content']}</p>`
+      })
+    }
+  })
+}
+
+const { MicropubClient } = understory
+const pub = new MicropubClient('/posts')
+document.addEventListener('DOMContentLoaded', () => {
+  pub.getConfig().then(data => console.log(data))
+  pub.getCategories().then(data => {
+    data.categories.forEach(cat => {
+      addCategory(cat)
+    })
+  })
+  const editor = document.querySelector('textarea[name=content]')
+  document.querySelector('#categories button').addEventListener('click', event => {
+    event.preventDefault()
+    const textbox = document.querySelector('#categories input')
+    addCategory(textbox.value)
+    textbox.value = ''
+  })
+
+  document.querySelector('input[name=in_reply_to]').addEventListener('blur', event => {
+    previewReplyContext(event.target.value)
+  })
+
+  var frequency = 1.5;  // seconds
+  var count = 0;
+  var clean = true;
+  // XXX var content = $$("textarea[name=-source-content]");
+  function tick() {
+      setTimeout(function() {
+          if (count++ > frequency * 10 && !clean)
+              updatePreview();
+          tick();
+      }, 100);
+  }
+  tick();
+  function updatePreview() {
+      clean = false;
+      if (count > frequency * 10) {
+          previewMarkdown(editor.value);
+          clean = true;
+          count = 0;
+      }
+  }
+  editor.addEventListener("keyup", function() {
+      updatePreview();
+  });
+  updatePreview();
+  // editor.addEventListener('onblur', event => {
+  // })
+
+  document.querySelector('form#editor').addEventListener('submit', event => {
+    event.preventDefault()
+    // let myForm = document.getElementById('editor')
+    // let formData = new FormData(myForm)
+    // for (let p of formData) {
+    //   console.log(p)
+    // }
+    const properties = {}
+  
+    const name = document.querySelector('input[name=name]').value
+    if (name) {
+      properties.name = [name]
+    }
+  
+    const content = editor.value
+    if (content) {
+      properties.content = [content]
+    }
+  
+    const published_date = document.querySelector('input[name=published_date]').value
+    const published_time = document.querySelector('input[name=published_time]').value
+    const published_tz = document.querySelector('select[name=published_tz]').value
+    console.log(published_date)
+    console.log(published_time)
+    console.log(published_tz)
+    if (published_date) {
+      let published = published_date
+      if (published_time) {
+        published = `$${published_date}T$${published_time}:00+00:00`
+      }
+      properties.published = [{datetime: published, timezone: published_tz}]
+    }
+  
+    const categories = []
+    document.querySelectorAll('#categories input[type=checkbox]').forEach(el => {
+      if (el.checked) {
+        categories.push(el.value)
+      }
+    })
+    if (categories.length) {
+      properties["category"] = categories
+    }
+  
+    console.log(properties)
+    pub.create('entry', properties, 'public').then(permalink => {
+      window.location.href = permalink
+    })
+  })
+})
+</script>
