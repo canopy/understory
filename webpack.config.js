@@ -1,7 +1,7 @@
 const path = require('path')
 
 const config = {
-  entry: 'web.ts/index.ts',
+  entry: 'web.ts',
   resolve: {
     extensions: ['', '.webpack.js', '.web.js', '.ts', '.tsx', '.js']
   },
@@ -17,7 +17,7 @@ const config = {
 const browserConfig = Object.assign({}, config, {
   output: {
     path: path.resolve(__dirname),
-    filename: 'web/framework/static/understory.js',
+    filename: 'web/framework/static/web.js',
     library: 'web'
   }
 })

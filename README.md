@@ -3,7 +3,7 @@ Social web framework
 
 ## Create a web app
 
-You should use `Poetry` but you can just use `pip`.
+You should use `Poetry`.
 
 ```shell
 poetry init

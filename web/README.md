@@ -1,55 +1,59 @@
-## understory.web
-tools for metamodern web development
+## web
+Tools for metamodern web development
 
-    >>> import web
+```python
+import web
+```
 
-## Browser
+## Applications
 
-uses Firefox via Selenium
+```python
+app = web.application(
+    __name__,
+    prefix="events",
+    model={"attendees": {"event_id": "INTEGER", "name": "TEXT"}}
+)
+```
 
-    >>> # browser = web.firefox()
-    >>> # browser.go("en.wikipedia.org/wiki/Pasta")
-    >>> # browser.shot("wikipedia-pasta.png")
+### Models
 
-## Cache
+### Views
 
-uses SQLite
-
-    >>> cache = web.cache()
-    >>> cache["indieweb.org/note"].entry["summary"]
-    'A note is a post that is typically short unstructured* plain text, written & posted quickly, that has its own permalink page.'
-    >>> cache["indieweb.org/note"].entry["summary"]  # served from cache
-    'A note is a post that is typically short unstructured* plain text, written & posted quickly, that has its own permalink page.'
-
-## Templating
+#### Templating
 
 Full Python inside string templates.
 
-    >>> str(web.template("$def with (name)\n$name")("Alice"))
-    'Alice'
+```pycon
+>>> str(web.template("$def with (name)\n$name")("Alice"))
+'Alice'
+```
 
-## Markdown
+##### Markdown
 
 Strict syntax subset (there should be one and only one way).
 
-Picoformat support eg. @person, @@org, #tag, %license
+Supports picoformats: @person, @@org, #tag, %license
 
-    >>> str(web.mkdn("*lorem* ipsum."))
-    '<p><em>lorem</em> ipsum. </p>'
+```pycon
+>>> str(web.mkdn("*lorem* ipsum."))
+'<p><em>lorem</em> ipsum. </p>'
+```
 
-## URL parsing
+### Controllers
 
-Defaults to safe-mode and raises DangerousURL eagerly. Up-to-date public
-suffix and HSTS support.
+```python
+@app.control("{event_id}/attendees")
+class EventAttendees:
+    def get(self):
+        return app.view.attendees(app.model.get_attendees(self.event_id))
 
-    >>> url = web.uri("example.cnpy.gdn/foo/bar?id=38")
-    >>> url.host
-    'example.cnpy.gdn'
-    >>> url.suffix
-    'cnpy.gdn'
-    >>> url.is_hsts()
-    True
+@app.model.control
+def get_attendees(db, event_id):
+    return db.select("attendees", where="event_id = ?", vals=[event_id])
+```
 
-### Microformat parsing
+## Mounting
 
-Parse `mf2` from HTML. Analyze vocabularies for stability/interoperability.
+import events
+
+app = web.application(__name__, mounts=[events.app])

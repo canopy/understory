@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "understory"
 version = "0.0.93-alpha.0"
-description = "Scaffolding for the canopy"
+description = "Social web framework"
 authors = [ "Angelo Gladding <angelo@ragt.ag>" ]
 license = "AGPL-3.0-or-later"
 readme = "README.md"
@@ -12,17 +12,26 @@ packages = [ { include = "web" }, { include = "understory" } ]
 Homepage = "https://understory.stream"
 
 [tool.poetry.plugins."web.apps"]
+braid = "understory.braid:app"
+cache = "understory.cache:app"
+data = "understory.data:app"
+jobs = "understory.jobs:app"
+owner = "understory.owner:app"
+providers = "understory.providers:app"
+search = "understory.search:app"
+sites = "understory.sites:app"
+system = "understory.system:app"
+tracker = "understory.tracker:app"
 indieauth_client = "understory.indieauth.client:app"
 indieauth_server = "understory.indieauth.server:app"
-micropub_server = "understory.micropub.server.posts:app"
-micropub_content = "understory.micropub.server.content:app"
-micropub_media = "understory.micropub.server.media:app"
-microsub_server = "understory.microsub.server:app"
+micropub_server = "understory.micropub.posts:app"
+micropub_content = "understory.micropub.content:app"
+micropub_media = "understory.micropub.media:app"
+microsub_server = "understory.microsub:app"
 webmention_endpoint = "understory.webmention:app"
 websub_endpoint = "understory.websub:app"
-editor = "understory.micropub.client:app"
-reader = "understory.microsub.client:app"
-tracker = "understory.apps.tracker:app"
+editor = "understory.editor:app"
+reader = "understory.reader:app"
 
 [tool.poetry.scripts]
 web = "web.__main__:main"
