@@ -1,5 +1,5 @@
 # Understory
-Social network scaffolding
+Social web framework
 
 ## Create a web app
 
