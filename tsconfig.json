@@ -1,0 +1,9 @@
+{
+  "compilerOptions": {
+    "moduleResoltion": "node",
+    "outDir": "./dist",
+    "allowJs": true,
+    "target": "es6"
+  },
+  "files": ["web.ts/index.ts"]
+}

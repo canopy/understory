@@ -6,12 +6,5 @@ test_results.xml
 server/tests/results.json
 server/understory/voice/model
 server/understory/voice/vosk-model*
-
 package-lock.json
-addon
-web-ext-artifacts
-
-understory.build
-understory.dist
-
-canopy-data
+dist
