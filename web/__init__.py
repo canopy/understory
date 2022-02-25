@@ -12,25 +12,21 @@ Simple interface, simple deploy.
 """
 
 from dns import resolver as dns
-from understory.mkdn import render as mkdn
-from understory.mm import template, templates
-from understory.uri import parse as uri
 
-from .agent import *  # noqa
-from .braid import *  # noqa
 from .framework import *  # noqa
+from .markdown import render as mkdn
 from .response import Status  # noqa
 from .response import (OK, Accepted, BadRequest, Conflict, Created, Forbidden,
                        Found, Gone, MethodNotAllowed, MultiStatus, NoContent,
                        NotFound, PermanentRedirect, SeeOther, Unauthorized)
+from .templating import template, templates
 
 __all__ = [
     "dns",
     "mkdn",
     "template",
     "templates",
-    "uri",
-    "OK",  # responses
+    "OK",
     "Accepted",
     "BadRequest",
     "Conflict",

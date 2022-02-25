@@ -10,9 +10,8 @@ import wsgiref.util
 import lxml
 import lxml.html
 from gevent import local
-from understory import uri
 
-from ..agent import parse
+from .. import agent, uri
 from ..headers import Headers
 
 __all__ = ["tx", "header", "shift_headings", "json", "JSONEncoder"]
@@ -51,7 +50,7 @@ def add_rel_links(**rels):
     if not tx.response.body:
         return
     try:
-        doc = parse(tx.response.body)
+        doc = agent.parse(tx.response.body)
         head = doc.select("head")[0]
     except IndexError:
         pass
@@ -144,7 +143,11 @@ class Request(Context):
 
 class RequestBody:
     def __init__(self, environ):
-        raw_data = environ["wsgi.input"].read()
+        try:
+            raw_data = environ["wsgi.input"].read()
+        except KeyError:
+            self._data = {}
+            return
         try:
             data = raw_data.decode("utf-8")
         except (AttributeError, UnicodeDecodeError):

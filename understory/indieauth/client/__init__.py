@@ -1,7 +1,7 @@
 """IndieAuth client."""
 
-from understory import uri, web
-from understory.web import tx
+import web
+from skutterbug import uri
 
 from ..util import generate_challenge
 
@@ -24,7 +24,9 @@ app = web.application(
 )
 
 
-def initiate_sign_in(client: uri, endpoint_path: str, user: uri, scopes: list) -> uri:
+def initiate_sign_in(
+    client: uri.URI, endpoint_path: str, user: uri.URI, scopes: list
+) -> uri.URI:
     """
     Return the URI to initiate an IndieAuth sign-in at `site` for `user`.
 
@@ -36,7 +38,7 @@ def initiate_sign_in(client: uri, endpoint_path: str, user: uri, scopes: list) -
     tx.user.session["authorization_endpoint"] = str(auth)
     tx.user.session["token_endpoint"] = str(web.discover_link(user, "token_endpoint"))
     tx.user.session["micropub_endpoint"] = str(web.discover_link(user, "micropub"))
-    client = uri(client)
+    client = uri.parse(client)
     auth["me"] = user
     auth["client_id"] = tx.user.session["client_id"] = client
     auth["redirect_uri"] = tx.user.session["redirect_uri"] = client / endpoint_path
@@ -74,7 +76,7 @@ def authorize_sign_in(state, code, flow):
     return response
 
 
-def sign_out(me: uri):
+def sign_out(me: uri.URI):
     """Sign the user out by revoking the token."""
     access_token = tx.auth_client.get_guest(me)["access_token"]
     web.post(
@@ -171,7 +173,7 @@ def get_guests(db):
 
 
 @app.model.control
-def get_guest(db, user: uri):
+def get_guest(db, user: uri.URI):
     """Return a user."""
     return db.select("guests", where="url = ?", vals=[user])[0]
 

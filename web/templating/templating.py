@@ -13,8 +13,8 @@ import pathlib
 import sys
 
 import pkg_resources
-from understory import mkdn, solarized
 
+from .. import markdown
 from . import parse
 
 __all__ = [
@@ -241,7 +241,7 @@ class TemplatePackage:
             for k, v in self._ns.__dict__.items()
             if k in getattr(self._ns, "__all__", [])
         }
-        self._globals["mkdn"] = mkdn.render
+        self._globals["mkdn"] = markdown.render
         self._globals.update(kwglobals)
         self._cache = {}
 
@@ -329,7 +329,7 @@ class Template:
         _globals = {
             "get_obj_name": lambda o: o.__name__,
             "get_obj_docstring": inspect.getdoc,
-            "mkdn": mkdn.render,
+            "mkdn": markdown.render,
         }
 
         _globals.update(**globals)
@@ -443,7 +443,7 @@ class Template:
         )
 
     def _join(self, *items):
-        return u"".join(items)
+        return "".join(items)
 
     def _escape(self, value, escape=False):
         if value is None:

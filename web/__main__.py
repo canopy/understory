@@ -1,15 +1,28 @@
 """Command line tools for the web."""
 
 import json
-import textwrap
-from pprint import pprint
+import pathlib
 
-from understory import term, web
+import clicks
+
+import web
 
 __all__ = ["main"]
 
 
-main = term.application("web", web.__doc__)
+main = clicks.application("web", web.__doc__)
+
+
+@main.register()
+class MF:
+    """Get a resource and parse it for Microformats."""
+
+    def setup(self, add_arg):
+        add_arg("uri", help="address of the resource")
+
+    def run(self, stdin, log):
+        pprint(agent.get(self.uri).mf2json)
+        return 0
 
 
 @main.register()
@@ -59,69 +72,29 @@ class Serve:
 
 
 @main.register()
-class MF:
-    """Get microformats."""
+class Config:
+    """Config your environments."""
 
     def setup(self, add_arg):
-        add_arg("uri", help="address of the resource to GET and parse for MF")
+        add_arg("provider", choices=("digitalocean",), help="hosting provider")
+        add_arg("token", help="API access token")
 
     def run(self, stdin, log):
-        pprint(web.get(self.uri).mf2json)
+        with pathlib.Path("~/.understory").expanduser().open("w") as fp:
+            json.dump({"provider": self.provider, "token": self.token}, fp)
         return 0
 
 
 @main.register()
-class Microsub:
-    """A Microsub reader."""
+class Host:
+    """Host a web app."""
 
     def setup(self, add_arg):
-        add_arg("endpoint", help="address of the Microsub endpoint")
+        ...
+        # add_arg("app", help="name of web application")
+        # add_arg("--port", help="port to serve on")
+        # add_arg("--socket", help="file socket to serve on")
+        # add_arg("--watch", default=".", help="directory to watch for changes")
 
     def run(self, stdin, log):
-        return 0
-
-
-@main.register()
-class Braidpub:
-    """A Braid publisher."""
-
-    def setup(self, add_arg):
-        add_arg("uri", help="address of the resource to publish")
-        add_arg("range", help="content-range of the update in JSON Range")
-
-    def run(self, stdin, log):
-        patch_body = stdin.read()
-        web.put(
-            self.uri,
-            headers={"Patches": "1"},
-            data=textwrap.dedent(
-                f"""
-            content-length: {len(patch_body)}
-            content-range: {self.range}
-
-            {patch_body}"""
-            ),
-        )
-        return 0
-
-
-@main.register()
-class Braidsub:
-    """A Braid subscriber."""
-
-    def setup(self, add_arg):
-        add_arg("uri", help="address of the resource to subscribe")
-
-    def run(self, stdin, log):
-        for version, parents, patches in web.subscribe(self.uri):
-            if version:
-                print("version:", version)
-            if parents:
-                print("parents:", parents)
-            for patch_range, patch_body in patches:
-                if patch_range:
-                    print("range:", patch_range)
-                print(patch_body)
-                print()
-            print()
         return 0

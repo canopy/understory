@@ -41,14 +41,13 @@ import Crypto.Random.random
 import gevent.pywsgi
 import pendulum
 import pkg_resources
+import sqlyte
 import unidecode
 import watchdog.events
 import watchdog.observers
 from rich.console import Console
-from understory import term  # noqa NOTE to colorize print()
-from understory import kv, mm, sql
 
-from ..agent import cache, parse
+from .. import agent, templating
 from ..response import Status  # noqa
 from ..response import (OK, Accepted, BadRequest, Conflict, Created, Forbidden,
                         Found, Gone, MethodNotAllowed, MultiStatus, NoContent,
@@ -77,7 +76,6 @@ __all__ = [
     # XXX "sessions",
     "require_auth",
     "tx",
-    "kv",
     "header",
     "add_rel_links",
     "Application",
@@ -109,7 +107,7 @@ __all__ = [
     "resume_session",
 ]
 
-sessions_model = sql.model(
+sessions_model = sqlyte.model(
     "WebSessions",
     sessions={
         "timestamp": "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP",
@@ -117,19 +115,7 @@ sessions_model = sql.model(
         "data": "TEXT NOT NULL",
     },
 )
-kvdb = kv.db(
-    "web",
-    ":",
-    {
-        "auth:secret": "string",
-        "auth:nonces": "set",
-        "reload-lock": "string",
-        "sessions:{session_id}": "string",
-        "sessions:{session_id}:data": "string",
-    },
-    session_id=r"[a-z0-9]{,65}",
-)
-config_templates = mm.templates(__name__)
+config_templates = templating.templates(__name__)
 methods = [
     "head",
     "get",
@@ -227,7 +213,7 @@ def setup_servers(root, app, bot):
     with (root / "etc/tor_stem_password").open("w") as fp:
         fp.write(str(random.getrandbits(100)))
 
-    session_salt = Crypto.Random.random.randint(10 ** 63, 10 ** 64)
+    session_salt = Crypto.Random.random.randint(10**63, 10**64)
     cfg = {
         "root": str(root),
         "watch": str(env / "src"),
@@ -288,9 +274,8 @@ async def serve(wsgi_app, port=9300, socket=None, workers=2, watch_dir="."):
 
         def on_modified(self, event):
             if event.src_path.endswith((".py", ".toml")):
-                # XXX if kvdb:
-                # XXX     while kvdb["reload-lock"]:
-                # XXX         time.sleep(2)
+                # while reload_lock:
+                #     time.sleep(1)
                 if SYSTEM == "Windows":
                     proc.send_signal(signal.SIGTERM)
                 else:
@@ -502,17 +487,21 @@ form = Form
 
 class File:
 
-    """ """
+    """"""
 
     def __init__(self, name, fileobj):
         self.name = name
         self.fileobj = fileobj
 
-    def save(self, filepath=None, **options):
-        """ """
+    def save(self, filepath=None, file_dir=None, **options):
+        """"""
         if filepath is None:
             filepath = self.fileobj.filename
         filepath = pathlib.Path(filepath)
+        if file_dir:
+            file_dir = pathlib.Path(file_dir)
+            file_dir.mkdir(exist_ok=True)
+            filepath = file_dir / filepath
         # TODO handle required
         required = options.pop("required", False)
         if required:
@@ -614,6 +603,20 @@ class Resource:
 # XXX         return self[key]
 
 
+class Response:
+    def __init__(self, status, headers, body):
+        self.status = status
+        self.headers = headers
+        self.body = body[0].decode()
+        self.parsed = None
+
+    @property
+    def dom(self):
+        if self.parsed is None:
+            self.parsed = agent.parse(self.body)
+        return self.parsed
+
+
 class Application:
     """
     A web application.
@@ -661,15 +664,18 @@ class Application:
         self.mounts = []
         self.controllers = []  # TODO use ordered dict
 
+        if model:
+            self.model = sqlyte.model(name, **model)
+
         if mounts:
             self.mount(*mounts)
         if db:
 
             def set_data_sources(handler, app):
-                tx.host.kv = kv.db(tx.request.uri.host, ":", {"jobs": "list"})
-                tx.host.db = sql.db(f"site-{tx.request.uri.host}.db", *models)
-                cache_db = sql.db(f"cache-{tx.request.uri.host}.db", cache.model)
-                tx.host.cache = cache(db=cache_db)
+                # XXX kv tx.host.kv = kv.db(tx.request.uri.host, ":", {"jobs": "list"})
+                tx.host.db = sqlyte.db(f"site-{tx.request.uri.host}.db", *models)
+                # TODO cache_db = sqlyte.db(f"cache-{tx.request.uri.host}.db", cache.model)
+                # TODO tx.host.cache = cache(db=cache_db)
                 yield
 
             self.wrappers.insert(0, resume_session)  # 2nd position
@@ -677,18 +683,18 @@ class Application:
             models = [sessions_model] + [
                 app.model for _, app in self.mounts if getattr(app, "model", None)
             ]
+            if model:
+                models.append(self.model)
             # XXX for site_db in pathlib.Path().glob("site-*.db"):
-            # XXX     sql.db(site_db, *models)
+            # XXX     sqlyte.db(site_db, *models)
         if wrappers:
             self.add_wrappers(*wrappers)
         # for _, mounted_app in self.mounts:
         #     self.add_wrappers(*mounted_app.wrappers)
         #     mounted_app.wrappers = []
 
-        if model:
-            self.model = sql.model(name, **model)
         try:
-            self.view = mm.templates(name)
+            self.view = templating.templates(name)
         except ModuleNotFoundError:
             pass  # NOTE borks on import errors in template __init__
 
@@ -699,16 +705,14 @@ class Application:
         except ModuleNotFoundError:
             pass
 
-        # XXX self.kv = kv.db(f"web-{name}", ":", {"jobs": "list"})
-
         # for method in http.spec.request.methods[:5]:
         #     setattr(self, method, functools.partial(self.get_handler,
         #                                             method=method))
         # XXX try:
-        # XXX     self.view = mm.templates(name, tx=tx)
+        # XXX     self.view = templating.templates(name, tx=tx)
         # XXX except ImportError:
         # XXX     try:
-        # XXX         self.view = mm.templates(name + ".__web__", tx=tx)
+        # XXX         self.view = templating.templates(name + ".__web__", tx=tx)
         # XXX     except ImportError:
         # XXX         pass
         if port:
@@ -844,6 +848,54 @@ class Application:
     def __repr__(self):
         return "<web.application: {}>".format(self.name)
 
+    def get(self, path):
+        return self.request("get", path)
+
+    def post(self, path):
+        return self.request("post", path)
+
+    def request(self, method, path):
+        environ = {
+            "HTTP_ACCEPT": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+            "HTTP_ACCEPT_ENCODING": "gzip, deflate",
+            "HTTP_ACCEPT_LANGUAGE": "en-US,en;q=0.5",
+            "HTTP_CONNECTION": "keep-alive",
+            "HTTP_COOKIE": "",
+            "HTTP_DNT": "1",
+            "HTTP_HOST": "test",
+            "HTTP_UPGRADE_INSECURE_REQUESTS": "1",
+            "HTTP_USER_AGENT": "Mozilla/5.0 (X11; Linux x86_64; rv:97.0) Gecko/20100101 Firefox/97.0",
+            "PATH_INFO": "/",
+            "QUERY_STRING": "",
+            "RAW_URI": "/",
+            "REMOTE_ADDR": "127.0.0.1",
+            "REMOTE_PORT": "34798",
+            "REQUEST_METHOD": method.upper(),
+            "SCRIPT_NAME": "",
+            "SERVER_NAME": "0.0.0.0",
+            "SERVER_PORT": "8081",
+            "SERVER_PROTOCOL": "HTTP/1.1",
+            "SERVER_SOFTWARE": "gunicorn/20.1.0",
+            # "gunicorn.socket": <gevent._socket3.socket at 0x7fc0baaa7040 object, fd=11, family=2, type=1, proto=6>,
+            # "wsgi.errors": <gunicorn.http.wsgi.WSGIErrorsWrapper object at 0x7fc0bcbe2910>,
+            # "wsgi.file_wrapper": <class 'gunicorn.http.wsgi.FileWrapper'>,
+            # "wsgi.input": <gunicorn.http.body.Body object at 0x7fc0ba7a5160>,
+            "wsgi.input_terminated": True,
+            "wsgi.multiprocess": True,
+            "wsgi.multithread": True,
+            "wsgi.run_once": False,
+            "wsgi.url_scheme": "http",
+            "wsgi.version": (1, 0),
+        }
+        response = {}
+
+        def start_response(status, headers):
+            response["status"] = status
+            response["headers"] = headers
+
+        response["body"] = self(environ, start_response)
+        return Response(**response)
+
     def __call__(self, environ, start_response):
         """The WSGI callable."""
         start = time.time()
@@ -970,7 +1022,10 @@ class Application:
             tx.response.body = body
         if tx.response.headers.content_type == "text/html":  # and tx.response.claimed:
             if not isinstance(tx.response.body, str):
-                tx.response.body = self.view.template(tx.response.body)
+                try:
+                    tx.response.body = self.view.template(tx.response.body)
+                except AttributeError:
+                    pass
         exhaust_hooks()  # here for mandatory wrappers (eg. session handling)
         # try:
         #     # exhaust_hooks()
@@ -1009,11 +1064,12 @@ class Application:
         method = tx.request.method
         host = tx.request.uri.host
         resource = tx.request.uri.path
-        console.print(f"{duration} {status} {method: >6} {host}/{resource}")
-        for k, v in sorted(tx.request.uri.query.items()):
-            console.print(f"    {k}: {v[0]}")
+        if "PYTEST_CURRENT_TEST" not in os.environ:
+            console.print(f"{duration} {status} {method: >6} {host}/{resource}")
+            for k, v in sorted(tx.request.uri.query.items()):
+                console.print(f"    {k}: {v[0]}")
 
-        if isinstance(tx.response.body, mm.templating.TemplateResult):
+        if isinstance(tx.response.body, templating.templating.TemplateResult):
             pass
         elif isinstance(tx.response.body, dict):
             header("Content-Type", "application/json")
@@ -1026,9 +1082,13 @@ class Application:
 
         if getattr(tx.response, "naked"):  # causes low-level gunicorn error
             return tx.response.body
+        elif isinstance(tx.response.body, pathlib.Path):
+            with tx.response.body.open("rb") as fp:
+                content = fp.read()
+            return [content]
         elif isinstance(tx.response.body, bytes):
             return [tx.response.body]
-        elif isinstance(tx.response.body, mm.templating.TemplateResult):
+        elif isinstance(tx.response.body, templating.templating.TemplateResult):
             pass
         elif isinstance(tx.response.body, dict):
             return [bytes(JSONEncoder().encode(tx.response.body), "utf-8")]
@@ -1112,55 +1172,6 @@ class Application:
             exc = MethodNotAllowed(f"{method.upper()} not allowed")
             exc.allowed = inspect.getmembers(controller, ismethod)
             raise exc
-
-
-# XXX def sessions(**defaults):
-# XXX     """
-# XXX     returns an application hook for session handling using given redis `db`
-# XXX
-# XXX     """
-# XXX
-# XXX     def hook(handler, app):
-# XXX         try:
-# XXX             identifier = tx.request.headers["cookie"].morsels["session"]
-# XXX         except KeyError:
-# XXX             identifier = 0
-# XXX         if ("sessions", identifier) not in kvdb:
-# XXX             while True:
-# XXX                 secret = "{}{}{}{}".format(
-# XXX                     random.getrandbits(128),
-# XXX                     app.cfg["session"]["salt"],
-# XXX                     time.time(),
-# XXX                     tx.user.ip,
-# XXX                 )
-# XXX                 secret_hash = hashlib.sha256(secret.encode("utf-8"))
-# XXX                 identifier = secret_hash.hexdigest()
-# XXX                 if kvdb["sessions", identifier].setnx("anonymous"):
-# XXX                     break
-# XXX         session_timeout = app.cfg["session"].get("timeout",
-# XXX                                                  default_session_timeout)
-# XXX         kvdb["sessions", identifier].expire(session_timeout)
-# XXX         # FIXME user.session = kvdb.hgetall(kvdb(user.identifier, "data"))
-# XXX         data = kvdb["sessions", identifier, "data"]
-# XXX         if data:
-# XXX             data = json.loads(str(data))
-# XXX         else:
-# XXX             data = Session(defaults)
-# XXX         # XXX print(identifier, data)
-# XXX         tx.user.session = data
-# XXX         tx.user.identifier = identifier
-# XXX         yield
-# XXX         kvdb["sessions", identifier, "data"] = \
-# XXX             JSONEncoder().encode(tx.user.session)
-# XXX         kvdb["sessions", identifier, "data"].expire(session_timeout)
-# XXX         # FIXME kvdb.delete("data")
-# XXX         # FIXME if user.session:
-# XXX         # FIXME     kvdb.hmset("data", **user.session)
-# XXX         # XXX print(identifier, data, tx.user.identifier, tx.user.session)
-# XXX         tx.response.headers["set-cookie"] = (("session", tx.user.identifier),)
-# XXX         # ("Domain", tx.host.name))
-# XXX
-# XXX     return hook
 
 
 def resume_session(handler, app):

@@ -78,3 +78,38 @@ The server will automatically reload on changes to the source code.
 ```shell
 poetry run web host example
 ```
+
+## URL parsing
+
+Defaults to safe-mode and raises DangerousURL eagerly. Up-to-date public
+suffix and HSTS support.
+
+    >>> url = skutterbug.uri("example.cnpy.gdn/foo/bar?id=38")
+    >>> url.host
+    'example.cnpy.gdn'
+    >>> url.suffix
+    'cnpy.gdn'
+    >>> url.is_hsts()
+    True
+
+## Cache
+
+uses SQLite
+
+    >>> cache = skutterbug.cache()
+    >>> cache["indieweb.org/note"].entry["summary"]
+    'A note is a post that is typically short unstructured* plain text, written & posted quickly, that has its own permalink page.'
+    >>> cache["indieweb.org/note"].entry["summary"]  # served from cache
+    'A note is a post that is typically short unstructured* plain text, written & posted quickly, that has its own permalink page.'
+
+### Microformat parsing
+
+Parse `mf2` from `HTML`. Analyze vocabularies for stability/interoperability.
+
+## Browser
+
+uses Firefox via Selenium
+
+    >>> # browser = skutterbug.Firefox()
+    >>> # browser.go("en.wikipedia.org/wiki/Pasta")
+    >>> # browser.shot("wikipedia-pasta.png")

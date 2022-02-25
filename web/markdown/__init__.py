@@ -62,8 +62,8 @@ import lxml.html.builder as E  # noqa
 import pygments
 import pygments.formatters
 import pygments.lexers
-from understory import uri
 
+from .. import uri
 from .titlecase import titlecase
 
 # XXX from understory.pkg import licensing

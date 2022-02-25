@@ -3,8 +3,8 @@
 import inspect
 from pprint import pformat
 
-from understory.solarized import highlight
-from understory.web.framework.util import tx
+from slrzd import highlight
+from web.framework.util import tx
 
 __all__ = ["inspect", "pformat", "highlight", "tx", "getsourcelines"]
 

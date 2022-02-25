@@ -1,6 +1,6 @@
 """Micropub editor."""
 
-from understory import web
+import web
 
 app = web.application(__name__, prefix="editor")
 

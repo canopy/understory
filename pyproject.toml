@@ -1,19 +1,18 @@
 [tool.poetry]
 name = "understory"
-version = "0.0.93-alpha.0"
+version = "0.0.134"
 description = "Social web framework"
-authors = [ "Angelo Gladding <angelo@ragt.ag>" ]
+authors = ["Angelo Gladding <angelo@ragt.ag>"]
 license = "AGPL-3.0-or-later"
+keywords = ["IndieWeb"]
 readme = "README.md"
-keywords = [ "IndieWeb" ]
-packages = [ { include = "web" }, { include = "understory" } ]
+packages = [{include="web"}, {include="understory"}]
 
 [tool.poetry.urls]
 Homepage = "https://understory.stream"
 
-[tool.poetry.plugins."web.apps"]
+[tool.poetry.plugins."understory"]
 braid = "understory.braid:app"
-cache = "understory.cache:app"
 data = "understory.data:app"
 jobs = "understory.jobs:app"
 owner = "understory.owner:app"
@@ -31,7 +30,6 @@ microsub_server = "understory.microsub:app"
 webmention_endpoint = "understory.webmention:app"
 websub_endpoint = "understory.websub:app"
 editor = "understory.editor:app"
-reader = "understory.reader:app"
 
 [tool.poetry.scripts]
 web = "web.__main__:main"
@@ -42,7 +40,7 @@ pendulum = "^2.1.2"
 semver = "^2.13.0"
 emoji = "^1.2.0"
 gunicorn = "^20.1.0"
-requests = { extras = ["socks"], version = "^2.27.1" }
+requests = {extras=["socks"], version="^2.27.1"}
 gevent = "^21.1.2"
 jsonpatch = "^1.32"
 pycryptodome = "^3.10.1"
@@ -56,23 +54,28 @@ regex = "^2021.7.6"
 certifi = "^2021.10.8"
 waitress = "^2.0.0"
 Pygments = "^2.11.2"
+clicks = "^0.0.47"
+sqlyte = "^0.0.10"
+lxml = "^4.8.0"
+slrzd = "^0.0.5"
+hstspreload = "^2021.12.1"
+pyvirtualdisplay = "^3.0"
+pyscreenshot = "^3.0"
+cssselect = "^1.1.0"
+selenium = "^4.1.2"
+pillow = "^9.0.1"
+mf2py = "^1.1.2"
+mf2util = "^0.5.1"
 
 [tool.poetry.dev-dependencies]
-ipython = "^8.0.1"
-pytest = "^6.2.4"
-pytest-cov = "^2.12.1"
 webdriver-manager = "^3.4.2"
-black = "^21.6b0"
 pytest-gevent = "^1.1.0"
-isort = "^5.9.2"
-flake8 = "^3.9.2"
-flake8-docstrings = "^1.6.0"
-pep8-naming = "^0.12.0"
 pydeps = "^1.10.12"
-radon = "^5.1.0"
 Nuitka = "^0.6.19"
-coverage = "^6.3.1"
-pynvim = "^0.4.3"
+
+[[tool.poetry.source]]
+name = "main"
+url = "http://localhost:8080/_pypi"
 
 [build-system]
 requires = [ "poetry-core>=1.0.0" ]
